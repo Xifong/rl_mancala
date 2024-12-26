@@ -4,8 +4,8 @@ import gymnasium as gym
 import itertools as it
 
 
-def random_opponent_policy(seed: int, _: list[int]) -> int:
-    np.random.seed(seed)
+def random_opponent_policy(seed: int, observation: list[int]) -> int:
+    # TODO: only pick valid actions at random
     return np.random.randint(0, 6)
 
 
@@ -14,6 +14,7 @@ class Mancala(gym.Env):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
 
+        self._history = []
         self._opponent_policy = opponent_policy
 
         # Initialise env state. If custom seed needed, reset should be called again with that.
@@ -30,9 +31,15 @@ class Mancala(gym.Env):
             + [self._opponent_score]
         )
 
-    def _make_valid_action(self, action: int):
-        gems = self._player_side[action]
-        self._player_side[action] = 0
+    def _make_valid_action(
+        self,
+        action: int,
+        entity_side: list[int],
+        entity_score: int,
+        entity_opponent_side: list[int],
+    ) -> tuple[list[int], int, list[int]]:
+        gems = entity_side[action]
+        entity_side[action] = 0
 
         first_add_to = action + 1
         # Generate a sequence of consecutive index positions into a
@@ -47,15 +54,29 @@ class Mancala(gym.Env):
             )
         )[first_add_to:]
 
-        add_to = [self._player_side, [self._player_score], self._opponent_side]
+        current_state = [entity_side, [entity_score], entity_opponent_side]
 
         for i, j in sequence:
-            add_to[i][j] += 1
+            current_state[i][j] += 1
 
-        self._player_side, self._player_score, self._opponent_side = add_to
+        # flatten current_state by extracting the entities score
+        return current_state[0], current_state[1][0], current_state[2]
 
     def _make_entity_action(self, action: int, is_player: bool):
-        self._make_valid_action(action)
+        if is_player:
+            self._player_side, self._player_score, self._opponent_side = (
+                self._make_valid_action(
+                    action, self._player_side, self._player_score, self._opponent_side
+                )
+            )
+        else:
+            self._opponent_side, self._opponent_score, self._player_side = (
+                self._make_valid_action(
+                    action, self._opponent_side, self._opponent_score, self._player_side
+                )
+            )
+
+        self._record()
 
     def step(self, action: int) -> tuple[list[int], float, bool, bool, Any]:
         if not self._is_action_valid(action):
@@ -71,14 +92,17 @@ class Mancala(gym.Env):
 
     def reset(self, seed: int = None, options: Any = None):
         super().reset(seed=seed)
+        np.random.seed(seed)
 
         self._player_side = [4] * 6
         self._opponent_side = [4] * 6
         self._player_score = 0
         self._opponent_score = 0
+
+        self._record()
+
         # Decide who starts at random
         _does_opponent_start = True if self.np_random.integers(low=0, high=2) else False
-
         if _does_opponent_start:
             self._make_entity_action(
                 self._opponent_policy(seed, self._get_obs()), is_player=False
@@ -87,12 +111,30 @@ class Mancala(gym.Env):
     def set_opponent_policy(self, policy: Any):
         self._opponent_policy = policy
 
+    def _record(self):
+        self._history.append(self._state_str)
+
+    @property
+    def _history_str(self) -> str:
+        return "\n\t" + "\n\t".join(self._history)
+
+    @property
+    def _full_str(self) -> str:
+        legend = "[p_side],[p_score],[o_side],[o_score]"
+        current_state = f"{self._player_side}, {self._player_score}, {self._opponent_side}, {self._opponent_score}"
+        return f"legend: {legend}\ncurrent_state: {current_state}\nhistory: {self._history_str}\n"
+
+    @property
+    def _state_str(self) -> str:
+        return f"{self._player_side}, {self._player_score}, {self._opponent_side}, {self._opponent_score}"
+
     def __str__(self) -> str:
-        return f"{self._player_side}, {self._player_score}=, {self._opponent_side}, {self._opponent_score=}"
+        return f"[p_side],[p_score],[o_side],[o_score]: {self._state_str}"
 
 
 if __name__ == "__main__":
     mancala = Mancala()
-    print(mancala)
     mancala.step(5)
-    print(mancala)
+    mancala.step(0)
+    mancala.step(2)
+    print(mancala._full_str)
