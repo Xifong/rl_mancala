@@ -68,35 +68,77 @@ class Mancala(gym.Env):
         for i, j in sequence:
             current_state[i][j] += 1
 
-        # flatten current_state by extracting the entities score
-        return current_state[0], current_state[1][0], current_state[2]
+        # Final gem was placed into the entities' Mancala
+        plays_again = sequence[-1][0] == 1
 
-    def _make_entity_action(self, action: int, is_player: bool):
+        # flatten current_state by extracting the entities score
+        return current_state[0], current_state[1][0], current_state[2], plays_again
+
+    def _make_entity_action(self, action: int, is_player: bool) -> bool:
         if is_player:
-            self._player_side, self._player_score, self._opponent_side = (
+            self._player_side, self._player_score, self._opponent_side, plays_again = (
                 self._make_valid_action(
                     action, self._player_side, self._player_score, self._opponent_side
                 )
             )
         else:
-            self._opponent_side, self._opponent_score, self._player_side = (
-                self._make_valid_action(
-                    action, self._opponent_side, self._opponent_score, self._player_side
-                )
+            (
+                self._opponent_side,
+                self._opponent_score,
+                self._player_side,
+                plays_again,
+            ) = self._make_valid_action(
+                action, self._opponent_side, self._opponent_score, self._player_side
             )
 
         self._record()
 
+        return plays_again
+
+    def _is_game_over(self) -> bool:
+        if sum(self._player_side) == 0 or sum(self._opponent_side) == 0:
+            return True
+
+        return False
+
+    def _get_player_reward(self) -> float:
+        if self._player_score > self._opponent_score:
+            return 1.0
+
+        if self._player_score == self._opponent_score:
+            return 0.5
+
+        return 0
+
+    def _opponent_takes_turn_if_not_game_over(self):
+        plays_again = True
+        while plays_again and not self._is_game_over():
+            plays_again = self._make_entity_action(
+                self._opponent_policy(self._seed, self._get_obs()), is_player=False
+            )
+
     def step(self, action: int) -> tuple[list[int], float, bool, bool, Any]:
+        assert (
+            not self._is_game_over()
+        ), "Attempting to step game even though game is over"
+
+        # No state change happens on invalid moves, but a negative reward is received
+        # Hopefully this will be enough to learn to produce only valid moves
         if not self._is_action_valid(action):
-            return self._get_obs(), -1, False, False, None
+            return self._get_obs(), -1.0, False, False, None
 
-        self._make_entity_action(action, is_player=True)
-        self._make_entity_action(
-            self._opponent_policy(self._seed, self._get_obs()), is_player=False
+        player_plays_again = self._make_entity_action(action, is_player=True)
+
+        if not player_plays_again:
+            self._opponent_takes_turn_if_not_game_over()
+
+        return (
+            self._get_obs(),
+            self._get_player_reward() if self._is_game_over() else 0,
+            self._is_game_over(),
+            False,
+            None,
         )
-
-        return self._get_obs(), 0, False, False, None
 
     def _is_action_valid(self, action: int) -> bool:
         return self._player_side[action] > 0
