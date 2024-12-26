@@ -22,13 +22,12 @@ class Mancala(gym.Env):
     ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
-        self._set_seed(seed)
 
         self._history = []
         self._opponent_policy = opponent_policy
 
         # Initialise env state. If custom seed needed, reset should be called again with that.
-        self.reset()
+        self.reset(seed=seed)
 
         # TODO: Switch to dict later if it seems better
         self.observation_space = gym.spaces.MultiDiscrete(np.array([49] * 14))
@@ -149,7 +148,7 @@ class Mancala(gym.Env):
 
 
 if __name__ == "__main__":
-    mancala = Mancala()
+    mancala = Mancala(seed=42)
     mancala.step(5)
     mancala.step(0)
     mancala.step(2)
