@@ -10,9 +10,12 @@ def random_opponent_policy(seed: int, observation: list[int]) -> int:
 
 
 class Mancala(gym.Env):
-    def __init__(self, opponent_policy: Callable = random_opponent_policy):
+    def __init__(
+        self, seed: int = None, opponent_policy: Callable = random_opponent_policy
+    ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
+        self._set_seed(seed)
 
         self._history = []
         self._opponent_policy = opponent_policy
@@ -90,9 +93,12 @@ class Mancala(gym.Env):
     def _is_action_valid(self, action: int) -> bool:
         return self._player_side[action] > 0
 
-    def reset(self, seed: int = None, options: Any = None):
+    def _set_seed(self, seed: int):
         super().reset(seed=seed)
         np.random.seed(seed)
+
+    def reset(self, seed: int = None, options: Any = None):
+        self._set_seed(seed)
 
         self._player_side = [4] * 6
         self._opponent_side = [4] * 6
@@ -133,7 +139,7 @@ class Mancala(gym.Env):
 
 
 if __name__ == "__main__":
-    mancala = Mancala()
+    mancala = Mancala(seed=42)
     mancala.step(5)
     mancala.step(0)
     mancala.step(2)
