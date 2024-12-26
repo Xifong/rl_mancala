@@ -5,8 +5,15 @@ import itertools as it
 
 
 def random_opponent_policy(seed: int, observation: list[int]) -> int:
-    # TODO: only pick valid actions at random
-    return np.random.randint(0, 6)
+    opponent_side = observation[-7:-1]
+    assert sum(opponent_side) > 0, "Opponent has no valid moves"
+
+    random_action = np.random.randint(0, 6)
+    # Depends on the player side being the first six elements of the observation
+    while opponent_side[random_action] == 0:
+        random_action = np.random.randint(0, 6)
+
+    return random_action
 
 
 class Mancala(gym.Env):
@@ -86,7 +93,9 @@ class Mancala(gym.Env):
             return self._get_obs(), -1, False, False, None
 
         self._make_entity_action(action, is_player=True)
-        self._make_entity_action(action, is_player=False)
+        self._make_entity_action(
+            self._opponent_policy(self._seed, self._get_obs()), is_player=False
+        )
 
         return self._get_obs(), 0, False, False, None
 
@@ -94,6 +103,7 @@ class Mancala(gym.Env):
         return self._player_side[action] > 0
 
     def _set_seed(self, seed: int):
+        self._seed = seed
         super().reset(seed=seed)
         np.random.seed(seed)
 
@@ -139,8 +149,47 @@ class Mancala(gym.Env):
 
 
 if __name__ == "__main__":
-    mancala = Mancala(seed=42)
+    mancala = Mancala()
     mancala.step(5)
     mancala.step(0)
     mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
+    mancala.step(5)
+    mancala.step(0)
+    mancala.step(2)
+    mancala.step(3)
+    mancala.step(4)
+    mancala.step(1)
     print(mancala._full_str)

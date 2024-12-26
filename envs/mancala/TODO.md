@@ -1,1 +1,3 @@
 - random opponent action needs to only take valid actions
+- implement other rules
+- check that self-play against the previously trained model will work.
