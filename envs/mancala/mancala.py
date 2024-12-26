@@ -1,13 +1,20 @@
-from typing import Any
+from typing import Any, Callable
 import numpy as np
 import gymnasium as gym
 import itertools as it
 
 
+def random_opponent_policy(seed: int, _: list[int]) -> int:
+    np.random.seed(seed)
+    return np.random.randint(0, 6)
+
+
 class Mancala(gym.Env):
-    def __init__(self):
+    def __init__(self, opponent_policy: Callable = random_opponent_policy):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
+
+        self._opponent_policy = opponent_policy
 
         # Initialise env state. If custom seed needed, reset should be called again with that.
         self.reset()
@@ -47,11 +54,15 @@ class Mancala(gym.Env):
 
         self._player_side, self._player_score, self._opponent_side = add_to
 
+    def _make_entity_action(self, action: int, is_player: bool):
+        self._make_valid_action(action)
+
     def step(self, action: int) -> tuple[list[int], float, bool, bool, Any]:
         if not self._is_action_valid(action):
             return self._get_obs(), -1, False, False, None
 
-        self._make_valid_action(action)
+        self._make_entity_action(action, is_player=True)
+        self._make_entity_action(action, is_player=False)
 
         return self._get_obs(), 0, False, False, None
 
@@ -66,14 +77,18 @@ class Mancala(gym.Env):
         self._player_score = 0
         self._opponent_score = 0
         # Decide who starts at random
-        self._is_player_turn = True if self.np_random.integers(low=0, high=2) else False
+        _does_opponent_start = True if self.np_random.integers(low=0, high=2) else False
+
+        if _does_opponent_start:
+            self._make_entity_action(
+                self._opponent_policy(seed, self._get_obs()), is_player=False
+            )
 
     def set_opponent_policy(self, policy: Any):
         self._opponent_policy = policy
 
     def __str__(self) -> str:
-        to_play = "player" if self._is_player_turn else "opponent"
-        return f"{self._player_side}, {self._player_score}=, {self._opponent_side}, {self._opponent_score=}, {to_play} to play"
+        return f"{self._player_side}, {self._player_score}=, {self._opponent_side}, {self._opponent_score=}"
 
 
 if __name__ == "__main__":
