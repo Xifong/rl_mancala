@@ -77,7 +77,7 @@ class Mancala(gym.Env):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
 
-        self._history = []
+        self.history = []
         self._opponent_policy = opponent_policy
 
         # Initialise env state. If custom seed needed, reset should be called again with that.
@@ -86,7 +86,7 @@ class Mancala(gym.Env):
         # TODO: Switch to dict later if it seems better
         self.observation_space = gym.spaces.MultiDiscrete(np.array([49] * 14))
 
-    def _get_obs(self) -> list[int]:
+    def _get_obs(self) -> tuple[int]:
         return (
             self._player_side
             + [self._player_score]
@@ -190,14 +190,22 @@ class Mancala(gym.Env):
         self._opponent_policy = policy
 
     def _record(self):
-        self._history.append(self._state_str)
+        self.history.append(
+            {
+                "player-side": self._player_side,
+                "player-score": self._player_score,
+                "opponent-side": self._opponent_side,
+                "opponent-score": self._opponent_score,
+                "as-str": self._state_str,
+            }
+        )
 
     @property
     def _history_str(self) -> str:
-        return "\n\t" + "\n\t".join(self._history)
+        return "\n\t" + "\n\t".join(map(lambda x: x["as-str"], self.history))
 
     @property
-    def _full_str(self) -> str:
+    def full_str(self) -> str:
         legend = "[p_side],[p_score],[o_side],[o_score]"
         current_state = f"{self._player_side}, {self._player_score}, {self._opponent_side}, {self._opponent_score}"
         return f"legend: {legend}\ncurrent_state: {current_state}\nhistory: {self._history_str}\n"
@@ -230,4 +238,4 @@ if __name__ == "__main__":
     mancala.step(3)
     mancala.step(4)
     mancala.step(1)
-    print(mancala._full_str)
+    print(mancala.full_str)
