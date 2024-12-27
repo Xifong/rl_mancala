@@ -16,6 +16,60 @@ def random_opponent_policy(seed: int, observation: list[int]) -> int:
     return random_action
 
 
+def generate_action_sequence(action: int, total_gems: int) -> list[tuple[int, int]]:
+    """
+    Generate a sequence of consecutive index positions as a flattened
+    [player_side (1*6), player_mancala (1*1), opponent_side (1*6)] list of tuples
+    """
+    first_add_to = action + 1
+    return list(
+        it.islice(
+            zip(
+                it.cycle([0] * 6 + [1] + [2] * 6),
+                it.cycle(list(range(6)) + [0] + list(range(6))),
+            ),
+            first_add_to,  # start
+            first_add_to + total_gems,  # stop
+        )
+    )
+
+
+def make_valid_action(
+    action: int,
+    entity_side: list[int],
+    entity_score: int,
+    entity_opponent_side: list[int],
+) -> tuple[list[int], int, list[int]]:
+    def make_capture(capture_from_index: int):
+        # The sides are arranged going around so to get the opposite spot,
+        # you have have to take away from the maximum action index i.e. 5 - action.
+        capture_to_index = 5 - capture_from_index
+        total = entity_side[capture_from_index] + entity_opponent_side[capture_to_index]
+        current_state[0][capture_from_index] = 0
+        current_state[2][capture_to_index] = 0
+        current_state[1][0] += total
+
+    gems = entity_side[action]
+    sequence = generate_action_sequence(action, gems)
+
+    entity_side[action] = 0
+    current_state = [entity_side, [entity_score], entity_opponent_side]
+
+    for i, j in sequence:
+        current_state[i][j] += 1
+
+    # Final gem was placed into the entities' Mancala
+    does_play_again = i == 1
+
+    # Final gem was placed into an empty position on the entities' side
+    does_capture = i == 0 and current_state[i][j] == 1
+    if does_capture:
+        make_capture(capture_from_index=j)
+
+    # flatten current_state by extracting the entities score
+    return current_state[0], current_state[1][0], current_state[2], does_play_again
+
+
 class Mancala(gym.Env):
     def __init__(
         self, seed: int = None, opponent_policy: Callable = random_opponent_policy
@@ -40,44 +94,10 @@ class Mancala(gym.Env):
             + [self._opponent_score]
         )
 
-    def _make_valid_action(
-        self,
-        action: int,
-        entity_side: list[int],
-        entity_score: int,
-        entity_opponent_side: list[int],
-    ) -> tuple[list[int], int, list[int]]:
-        gems = entity_side[action]
-        entity_side[action] = 0
-
-        first_add_to = action + 1
-        # Generate a sequence of consecutive index positions into a
-        # [[player_side] (1*6), [player_mancala] (1*1), [opponent_side] (1*6)] list of lists
-        sequence = list(
-            it.islice(
-                zip(
-                    it.cycle([0] * 6 + [1] + [2] * 6),
-                    it.cycle(list(range(6)) + [0] + list(range(6))),
-                ),
-                gems + first_add_to,
-            )
-        )[first_add_to:]
-
-        current_state = [entity_side, [entity_score], entity_opponent_side]
-
-        for i, j in sequence:
-            current_state[i][j] += 1
-
-        # Final gem was placed into the entities' Mancala
-        plays_again = sequence[-1][0] == 1
-
-        # flatten current_state by extracting the entities score
-        return current_state[0], current_state[1][0], current_state[2], plays_again
-
     def _make_entity_action(self, action: int, is_player: bool) -> bool:
         if is_player:
             self._player_side, self._player_score, self._opponent_side, plays_again = (
-                self._make_valid_action(
+                make_valid_action(
                     action, self._player_side, self._player_score, self._opponent_side
                 )
             )
@@ -87,7 +107,7 @@ class Mancala(gym.Env):
                 self._opponent_score,
                 self._player_side,
                 plays_again,
-            ) = self._make_valid_action(
+            ) = make_valid_action(
                 action, self._opponent_side, self._opponent_score, self._player_side
             )
 
@@ -156,6 +176,7 @@ class Mancala(gym.Env):
         self._player_score = 0
         self._opponent_score = 0
 
+        # record initial env state
         self._record()
 
         # Decide who starts at random
@@ -191,30 +212,6 @@ class Mancala(gym.Env):
 
 if __name__ == "__main__":
     mancala = Mancala(seed=42)
-    mancala.step(5)
-    mancala.step(0)
-    mancala.step(2)
-    mancala.step(3)
-    mancala.step(4)
-    mancala.step(1)
-    mancala.step(5)
-    mancala.step(0)
-    mancala.step(2)
-    mancala.step(3)
-    mancala.step(4)
-    mancala.step(1)
-    mancala.step(5)
-    mancala.step(0)
-    mancala.step(2)
-    mancala.step(3)
-    mancala.step(4)
-    mancala.step(1)
-    mancala.step(5)
-    mancala.step(0)
-    mancala.step(2)
-    mancala.step(3)
-    mancala.step(4)
-    mancala.step(1)
     mancala.step(5)
     mancala.step(0)
     mancala.step(2)
