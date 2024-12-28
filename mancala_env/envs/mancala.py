@@ -2,6 +2,13 @@ from typing import Any, Callable
 import numpy as np
 import gymnasium as gym
 import itertools as it
+from enum import Enum
+
+
+class GameOutcome(Enum):
+    WIN = "win"
+    DRAW = "draw"
+    LOSE = "lose"
 
 
 def random_opponent_policy(seed: int, observation: np.array) -> int:
@@ -72,7 +79,9 @@ def make_valid_action(
 
 class MancalaEnv(gym.Env):
     def __init__(
-        self, seed: int = None, opponent_policy: Callable = random_opponent_policy
+        self,
+        seed: int = None,
+        opponent_policy: Callable = random_opponent_policy,
     ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
@@ -93,6 +102,14 @@ class MancalaEnv(gym.Env):
             + self._opponent_side
             + [self._opponent_score]
         )
+
+    def _get_info(self) -> dict:
+        info = {}
+        if self._is_game_over():
+            info["is_success"] = self._game_outcome == GameOutcome.WIN
+            info["is_draw"] = self._game_outcome == GameOutcome.DRAW
+            info["is_loss"] = self._game_outcome == GameOutcome.LOSE
+        return info
 
     def _make_entity_action(self, action: int, is_player: bool) -> bool:
         if is_player:
@@ -121,14 +138,27 @@ class MancalaEnv(gym.Env):
 
         return False
 
-    def _get_player_reward(self) -> float:
+    @property
+    def _game_outcome(self) -> str:
         if self._player_score > self._opponent_score:
-            return 10.0
+            return GameOutcome.WIN
 
         if self._player_score == self._opponent_score:
-            return 4.0
+            return GameOutcome.DRAW
 
-        return 0
+        return GameOutcome.LOSE
+
+    def _get_player_reward(self) -> float:
+        if not self._is_game_over():
+            return 1.0 if self._game_outcome == GameOutcome.WIN else 0
+
+        if self._game_outcome == GameOutcome.WIN:
+            return 100.0
+
+        if self._game_outcome == GameOutcome.DRAW:
+            return 0
+
+        return -100.0
 
     def _opponent_takes_turn_if_not_game_over(self):
         plays_again = True
@@ -145,7 +175,13 @@ class MancalaEnv(gym.Env):
         # No state change happens on invalid moves, but a negative reward is received
         # Hopefully this will be enough to learn to produce only valid moves
         if not self._is_action_valid(action):
-            return self._get_obs(), -1.0, False, False, {}
+            return (
+                self._get_obs(),
+                -1.0,
+                False,
+                False,
+                self._get_info(),
+            )
 
         player_plays_again = self._make_entity_action(action, is_player=True)
 
@@ -154,10 +190,10 @@ class MancalaEnv(gym.Env):
 
         return (
             self._get_obs(),
-            self._get_player_reward() if self._is_game_over() else 0,
+            self._get_player_reward(),
             self._is_game_over(),
             False,
-            {},
+            self._get_info(),
         )
 
     def _is_action_valid(self, action: int) -> bool:

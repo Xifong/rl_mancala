@@ -2,11 +2,13 @@ import gymnasium as gym
 
 import mancala_env
 from stable_baselines3 import DQN
+from stable_baselines3.common.env_checker import check_env
 
 env = gym.make("Mancala-v0", max_episode_steps=100)
+check_env(env)
 
 model = DQN("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=20_000, log_interval=4)
+model.learn(total_timesteps=100_000, log_interval=4)
 model.save("dqn_mancala")
 
 obs, info = env.reset()
