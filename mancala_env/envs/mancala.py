@@ -4,7 +4,7 @@ import gymnasium as gym
 import itertools as it
 
 
-def random_opponent_policy(seed: int, observation: list[int]) -> int:
+def random_opponent_policy(seed: int, observation: np.array) -> int:
     # Depends on the opponent side being the last (but one) six elements of the observation
     opponent_side = observation[-7:-1]
     assert sum(opponent_side) > 0, "Opponent has no valid moves"
@@ -70,14 +70,13 @@ def make_valid_action(
     return current_state[0], current_state[1][0], current_state[2], does_play_again
 
 
-class Mancala(gym.Env):
+class MancalaEnv(gym.Env):
     def __init__(
         self, seed: int = None, opponent_policy: Callable = random_opponent_policy
     ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
 
-        self.history = []
         self._opponent_policy = opponent_policy
 
         # Initialise env state. If custom seed needed, reset should be called again with that.
@@ -85,9 +84,10 @@ class Mancala(gym.Env):
 
         # TODO: Switch to dict later if it seems better
         self.observation_space = gym.spaces.MultiDiscrete(np.array([49] * 14))
+        self.action_space = gym.spaces.Discrete(6)
 
-    def _get_obs(self) -> tuple[int]:
-        return (
+    def _get_obs(self) -> np.array:
+        return np.array(
             self._player_side
             + [self._player_score]
             + self._opponent_side
@@ -123,10 +123,10 @@ class Mancala(gym.Env):
 
     def _get_player_reward(self) -> float:
         if self._player_score > self._opponent_score:
-            return 1.0
+            return 10.0
 
         if self._player_score == self._opponent_score:
-            return 0.5
+            return 4.0
 
         return 0
 
@@ -137,7 +137,7 @@ class Mancala(gym.Env):
                 self._opponent_policy(self._seed, self._get_obs()), is_player=False
             )
 
-    def step(self, action: int) -> tuple[list[int], float, bool, bool, Any]:
+    def step(self, action: int) -> tuple[list[int], float, bool, bool, dict]:
         assert (
             not self._is_game_over()
         ), "Attempting to step game even though game is over"
@@ -145,7 +145,7 @@ class Mancala(gym.Env):
         # No state change happens on invalid moves, but a negative reward is received
         # Hopefully this will be enough to learn to produce only valid moves
         if not self._is_action_valid(action):
-            return self._get_obs(), -1.0, False, False, None
+            return self._get_obs(), -1.0, False, False, {}
 
         player_plays_again = self._make_entity_action(action, is_player=True)
 
@@ -157,7 +157,7 @@ class Mancala(gym.Env):
             self._get_player_reward() if self._is_game_over() else 0,
             self._is_game_over(),
             False,
-            None,
+            {},
         )
 
     def _is_action_valid(self, action: int) -> bool:
@@ -168,7 +168,7 @@ class Mancala(gym.Env):
         super().reset(seed=seed)
         np.random.seed(seed)
 
-    def reset(self, seed: int = None, options: Any = None):
+    def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
         self._set_seed(seed)
 
         self._player_side = [4] * 6
@@ -176,6 +176,7 @@ class Mancala(gym.Env):
         self._player_score = 0
         self._opponent_score = 0
 
+        self.history = []
         # record initial env state
         self._record()
 
@@ -185,6 +186,8 @@ class Mancala(gym.Env):
             self._make_entity_action(
                 self._opponent_policy(seed, self._get_obs()), is_player=False
             )
+
+        return self._get_obs(), {}
 
     def set_opponent_policy(self, policy: Any):
         self._opponent_policy = policy
@@ -215,11 +218,11 @@ class Mancala(gym.Env):
         return f"{self._player_side}, {self._player_score}, {self._opponent_side}, {self._opponent_score}"
 
     def __str__(self) -> str:
-        return f"[p_side],[p_score],[o_side],[o_score]: {self._state_str}"
+        return self.full_str
 
 
 if __name__ == "__main__":
-    mancala = Mancala(seed=42)
+    mancala = MancalaEnv(seed=42)
     mancala.step(5)
     mancala.step(0)
     mancala.step(2)

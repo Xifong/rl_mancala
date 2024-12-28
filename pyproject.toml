@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mancala_env"
+version = "0.0.1"
+dependencies = [
+    "gymnasium",
+    "pygame==2.6.1",
+]
+requires-python = ">= 3.12.4"
