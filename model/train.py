@@ -28,3 +28,4 @@ model = DQN("MlpPolicy", env, verbose=1)
 model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
 
 view_logs.generate_plots()
+view_logs.save_model()

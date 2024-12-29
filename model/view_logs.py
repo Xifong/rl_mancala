@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+import shutil
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -29,5 +32,23 @@ def generate_plots():
         plt.savefig("./logs/plots.png")
 
 
+def mkdir_p(path: str):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+
+def save_model():
+    now = f"{datetime.now():%Y-%m-%d_%H-%M-%S}"
+    mkdir_p(f"./saved_models/{now}/")
+    for file in os.listdir("./logs/"):
+        filename = os.path.basename(file)
+        shutil.copy(
+            f"./logs/{filename}",
+            f"./saved_models/{now}/{filename}",
+        )
+
+
 if __name__ == "__main__":
     generate_plots()
+    breakpoint()
+    save_model()
