@@ -1,5 +1,5 @@
 venv/
 **/__pycache__/**
 **/*.zip 
-**/logs/**
+**/last_run/**
 **/saved_models/**

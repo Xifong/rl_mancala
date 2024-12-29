@@ -1,11 +1,11 @@
-Train: 
+Train:
 ```bash
-python3 model/train.py && wslview logs/plots.png
+python3 model/train.py && wslview ./last_run/plots.png
 ```
 
 Regenerate plots:
 ```bash
-python3 model/view_logs.py && wslview logs/plots.png
+python3 model/save.py && wslview ./last_run/plots.png
 ```
 
 Infer:

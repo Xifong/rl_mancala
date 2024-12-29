@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 
 matplotlib.use("Agg")
 
+last_run_path = "./last_run/"
+
 
 def generate_plots():
-    with np.load("./logs/evaluations.npz") as data:
+    with np.load(f"{last_run_path}/evaluations.npz") as data:
         fig, axes = plt.subplots(3)
         timesteps, results, ep_lengths, successes = (
             data["timesteps"],
@@ -29,7 +31,7 @@ def generate_plots():
         axes[2].set_ylim(0.0, 1.0)
 
         axes[2].set_xlabel("timesteps")
-        plt.savefig("./logs/plots.png")
+        plt.savefig(f"{last_run_path}/plots.png")
 
 
 def mkdir_p(path: str):
@@ -37,18 +39,21 @@ def mkdir_p(path: str):
         os.makedirs(path)
 
 
-def save_model():
+def save_files():
     now = f"{datetime.now():%Y-%m-%d_%H-%M-%S}"
     mkdir_p(f"./saved_models/{now}/")
-    for file in os.listdir("./logs/"):
+    for file in os.listdir(last_run_path):
         filename = os.path.basename(file)
         shutil.copy(
-            f"./logs/{filename}",
+            f"{last_run_path}/{filename}",
             f"./saved_models/{now}/{filename}",
         )
 
 
-if __name__ == "__main__":
+def save_run():
     generate_plots()
-    breakpoint()
-    save_model()
+    save_files()
+
+
+if __name__ == "__main__":
+    save_run()
