@@ -4,6 +4,8 @@ import gymnasium as gym
 import itertools as it
 from enum import Enum
 
+from stable_baselines3 import DQN
+
 
 class GameOutcome(Enum):
     WIN = "win"
@@ -21,6 +23,22 @@ def random_opponent_policy(seed: int, observation: np.array) -> int:
         random_action = np.random.randint(0, 6)
 
     return random_action
+
+
+def saved_opponent_policy(seed: int, observation: np.array) -> int:
+    opponent_side = observation[-7:-1]
+    assert sum(opponent_side) > 0, "Opponent has no valid moves"
+
+    model_path = "./saved_models/2024-12-29_09-11-33/"
+    model = DQN.load(f"{model_path}/best_model")
+
+    action, _ = model.predict(observation, deterministic=True)
+
+    # Use random if opponent model is trying to play invalid move
+    while opponent_side[action] == 0:
+        action = np.random.randint(0, 6)
+
+    return int(action)
 
 
 def generate_action_sequence(action: int, total_gems: int) -> list[tuple[int, int]]:
@@ -81,7 +99,7 @@ class MancalaEnv(gym.Env):
     def __init__(
         self,
         seed: int = None,
-        opponent_policy: Callable = random_opponent_policy,
+        opponent_policy: Callable = saved_opponent_policy,
     ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
@@ -204,20 +222,47 @@ class MancalaEnv(gym.Env):
         super().reset(seed=seed)
         np.random.seed(seed)
 
-    def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
+    def get_serialised_form(self) -> dict:
+        return {
+            "player_side": self._player_side,
+            "opponent_side": self._opponent_side,
+            "player_score": self._player_score,
+            "opponent_score": self._opponent_score,
+            # Always False since the opponent play always assumed to have happened
+            "opponent_to_start": False,
+        }
+
+    def deserialise_into_midgame(self, serialised_form: dict):
+        self.reset(serialised_form=serialised_form)
+
+    def _deserialise(self, serialised_form: dict) -> bool:
+        self._player_side = serialised_form["player_side"]
+        self._opponent_side = serialised_form["opponent_side"]
+        self._player_score = serialised_form["player_score"]
+        self._opponent_score = serialised_form["opponent_score"]
+        return serialised_form["opponent_to_start"]
+
+    def reset(
+        self, seed: int = None, options: Any = None, serialised_form: dict = None
+    ) -> tuple[list[int], dict]:
         self._set_seed(seed)
 
-        self._player_side = [4] * 6
-        self._opponent_side = [4] * 6
-        self._player_score = 0
-        self._opponent_score = 0
+        if not serialised_form:
+            self._player_side = [4] * 6
+            self._opponent_side = [4] * 6
+            self._player_score = 0
+            self._opponent_score = 0
+            # Decide who starts at random
+            _does_opponent_start = (
+                True if self.np_random.integers(low=0, high=2) else False
+            )
+        else:
+            _does_opponent_start = self._deserialise(serialised_form)
 
         self.history = []
         # record initial env state
         self._record()
 
-        # Decide who starts at random
-        _does_opponent_start = True if self.np_random.integers(low=0, high=2) else False
         if _does_opponent_start:
             self._make_entity_action(
                 self._opponent_policy(seed, self._get_obs()), is_player=False

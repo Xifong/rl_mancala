@@ -18,14 +18,14 @@ eval_callback = EvalCallback(
     eval_env,
     best_model_save_path=save.last_run_path,
     log_path=save.last_run_path,
-    eval_freq=1500,
-    n_eval_episodes=80,
+    eval_freq=5000,
+    n_eval_episodes=50,
     deterministic=True,
     render=False,
 )
 
 model = DQN("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=10_000, log_interval=4, callback=eval_callback)
+model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
 
 # Assumes that an EvalCallback has been used
 save.save_run()
