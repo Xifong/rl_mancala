@@ -5,7 +5,7 @@ from stable_baselines3 import DQN
 
 env = gym.make("Mancala-v0", max_episode_steps=100)
 
-model = DQN.load("dqn_mancala")
+model = DQN.load("./logs/best_model")
 
 
 obs, info = env.reset()
