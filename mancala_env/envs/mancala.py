@@ -105,10 +105,10 @@ class MancalaEnv(gym.Env):
 
     def _get_info(self) -> dict:
         info = {}
-        if self._is_game_over():
-            info["is_success"] = self._game_outcome == GameOutcome.WIN
-            info["is_draw"] = self._game_outcome == GameOutcome.DRAW
-            info["is_loss"] = self._game_outcome == GameOutcome.LOSE
+        info["is_success"] = self._game_outcome == GameOutcome.WIN
+        info["is_draw"] = self._game_outcome == GameOutcome.DRAW
+        info["is_loss"] = self._game_outcome == GameOutcome.LOSE
+
         return info
 
     def _make_entity_action(self, action: int, is_player: bool) -> bool:
