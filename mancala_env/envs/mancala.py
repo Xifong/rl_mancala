@@ -214,6 +214,22 @@ class MancalaEnv(gym.Env):
             self._get_info(),
         )
 
+    def step_in_play_mode(self, action: int):
+        assert (
+            not self._is_game_over()
+        ), "Attempting to step game even though game is over"
+
+        assert self._is_action_valid(
+            action
+        ), "the action sent to step the env during play is invalid"
+
+        if self._is_player_turn:
+            self._is_player_turn = self._make_entity_action(action, is_player=True)
+        else:
+            # _make_entity_action returns whether the entity that just played gets to play again
+            # negation ensures the player will not play again if the is_player=False entity gets another turn
+            self._is_player_turn = not self._make_entity_action(action, is_player=False)
+
     def _is_action_valid(self, action: int) -> bool:
         return self._player_side[action] > 0
 
@@ -232,9 +248,6 @@ class MancalaEnv(gym.Env):
             "opponent_to_start": False,
         }
 
-    def deserialise_into_midgame(self, serialised_form: dict):
-        self.reset(serialised_form=serialised_form)
-
     def _deserialise(self, serialised_form: dict) -> bool:
         self._player_side = serialised_form["player_side"]
         self._opponent_side = serialised_form["opponent_side"]
@@ -242,31 +255,41 @@ class MancalaEnv(gym.Env):
         self._opponent_score = serialised_form["opponent_score"]
         return serialised_form["opponent_to_start"]
 
-    def reset(
-        self, seed: int = None, options: Any = None, serialised_form: dict = None
-    ) -> tuple[list[int], dict]:
-        self._set_seed(seed)
+    def _set_board_initial_state(self):
+        self._player_side = [4] * 6
+        self._opponent_side = [4] * 6
+        self._player_score = 0
+        self._opponent_score = 0
 
-        if not serialised_form:
-            self._player_side = [4] * 6
-            self._opponent_side = [4] * 6
-            self._player_score = 0
-            self._opponent_score = 0
-            # Decide who starts at random
-            _does_opponent_start = (
-                True if self.np_random.integers(low=0, high=2) else False
-            )
-        else:
-            _does_opponent_start = self._deserialise(serialised_form)
-
+    def _start_new_history(self):
         self.history = []
         # record initial env state
         self._record()
+
+    def start_in_play_mode_initial(self, is_player_turn: bool):
+        self._set_board_initial_state()
+        self._start_new_history()
+        self._is_player_turn = is_player_turn
+
+    def start_in_play_mode_midgame(self, game_state: dict):
+        self._is_player_turn = self._deserialise(game_state)
+        self._start_new_history()
+
+    def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
+        self._set_seed(seed)
+
+        self._set_board_initial_state()
+        self._start_new_history()
+
+        # Decide who starts at random
+        _does_opponent_start = True if self.np_random.integers(low=0, high=2) else False
 
         if _does_opponent_start:
             self._make_entity_action(
                 self._opponent_policy(seed, self._get_obs()), is_player=False
             )
+
+        self._is_player_turn = True
 
         return self._get_obs(), {}
 

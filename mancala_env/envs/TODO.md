@@ -1,5 +1,7 @@
 # Todo next
 
+* Get minimal dependencies for deploying inference
+    - Leave out torch gpu stuff
 * add some unit tests to test:
     - normal sequence play
     - turn repeat
