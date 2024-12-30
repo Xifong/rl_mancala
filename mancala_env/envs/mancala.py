@@ -30,6 +30,7 @@ def saved_opponent_policy(seed: int, observation: np.array) -> int:
     assert sum(opponent_side) > 0, "Opponent has no valid moves"
 
     model_path = "./saved_models/2024-12-29_09-11-33/"
+    # Can probably speed up training by not repeating this loading!
     model = DQN.load(f"{model_path}/best_model")
 
     action, _ = model.predict(observation, deterministic=True)

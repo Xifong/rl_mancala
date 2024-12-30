@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Any
-from flask import Flask, request, abort
+from flask import Flask, request, abort, make_response, jsonify
 
 import gymnasium as gym
 import mancala_env
@@ -11,6 +11,14 @@ import model.infer as model
 app = Flask(__name__)
 
 logger = app.logger
+
+
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.route("/api/initial_state", methods=["POST"])
