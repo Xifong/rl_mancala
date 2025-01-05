@@ -1,12 +1,20 @@
 import os
 import json
 from typing import Any
-from flask import Flask, request, abort, make_response, jsonify
+from flask import Flask, request, abort
 
 import gymnasium as gym
-import mancala_env
+import pkg.mancala_env_pkg
 
-import model.infer as model
+from gymnasium.envs.registration import register
+
+from pkg.mancala_agent_pkg.model import infer as model
+
+# Not sure why this re-registration is required. i.e. the one in the pkg isn't working
+register(
+    id="Mancala-v0",
+    entry_point="src.envs:MancalaEnv",
+)
 
 app = Flask(__name__)
 

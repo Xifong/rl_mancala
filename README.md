@@ -40,6 +40,12 @@ First change the used model in `./model/infer.py` to be a model you've trained u
 python3 model/infer.py
 ```
 
+## Run inference API server
+### Locally
+```bash
+./build/env/local_build.sh && python -m pkg.mancala_agent_pkg.inference_api.server 
+```
+
 ## Test Mancala custom env
 
 ```bash
@@ -47,3 +53,8 @@ pytest && python3 ./mancala_env/envs/mancala.py
 ```
 
 Unit tests are (very much) incomplete atm.
+
+### Build and install mancala env
+```bash
+./build/env/local_build.sh
+```

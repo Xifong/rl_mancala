@@ -1,5 +1,7 @@
 *venv/
-**/__pycache__/**
+**/dist/
+**/__pycache__/
 **/*.zip 
-**/last_run/**
-**/saved_models/**
+**/last_run/
+**/saved_models/
+**/tmp/

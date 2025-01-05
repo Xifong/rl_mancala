@@ -1,5 +1,9 @@
 # Todo next
 
+* Fix the broken hatch build of the env (it's causing docker builds of the api to fail + repeat
+  registration of the env with gymnasium to be needed. The whl has 5 bytes after being built!)
+* have all outs go to `out` dir
+* Split api out of mancala_agent_pkg
 * Get minimal dependencies for deploying inference
     - Leave out torch gpu stuff
 * add some unit tests to test:
