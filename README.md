@@ -46,6 +46,18 @@ python3 model/infer.py
 ./build/env/local_build.sh && python -m pkg.mancala_agent_pkg.inference_api.server 
 ```
 
+### Locally in Docker
+```bash
+./build/api/build.sh && PORT=8000 && docker run -d -p 8000:${PORT} -e PORT=${PORT} mancala 
+```
+Then to debug there are some options:
+```bash
+docker ps # to get process number
+docker logs -f <process number>
+docker run -it --entrypoint=/bin/bash mancala
+# Can obviously then send requests to localhost:8000
+```
+
 ## Test Mancala custom env
 
 ```bash
