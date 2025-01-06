@@ -4,17 +4,9 @@ from typing import Any
 from flask import Flask, request, abort
 
 import gymnasium as gym
-import pkg.mancala_env_pkg
-
-from gymnasium.envs.registration import register
+import mancala_env
 
 from pkg.mancala_agent_pkg.model import infer as model
-
-# Not sure why this re-registration is required. i.e. the one in the pkg isn't working
-register(
-    id="Mancala-v0",
-    entry_point="src.envs:MancalaEnv",
-)
 
 app = Flask(__name__)
 

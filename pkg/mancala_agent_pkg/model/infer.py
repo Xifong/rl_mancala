@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
-import pkg.mancala_env_pkg
+import mancala_env
 from stable_baselines3 import DQN
 
 infer_using = "./saved_models/2024-12-29_12-30-15/"
