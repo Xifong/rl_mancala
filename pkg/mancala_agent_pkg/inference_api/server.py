@@ -28,9 +28,9 @@ def get_initial_state():
 
     data = json.loads(request.data)
     is_player_turn = data["is-agent-turn"]
-    env = gym.make("Mancala-v0", max_episode_steps=100).unwrapped
+    env = get_gym_env()
     env.start_in_play_mode_initial(is_player_turn)
-    return serialise_env(env)
+    return env.get_serialised_form()
 
 
 @app.route("/api/next_state", methods=["POST"])
@@ -42,7 +42,7 @@ def get_next_env_state():
     serialised_env, action_to_play = data["current-state"], data["action"]
     env = deserialise_env(serialised_env)
     env.step_in_play_mode(action_to_play)
-    return serialise_env(env)
+    return env.get_serialised_form()
 
 
 @app.route("/api/next_move", methods=["POST"])
@@ -58,16 +58,19 @@ def get_next_move():
     return str(action)
 
 
-def serialise_env(env: gym.Env) -> dict:
-    base_env = env.unwrapped
-    return base_env.get_serialised_form()
-
-
 def deserialise_env(serialised_form: Any) -> gym.Env:
-    env = gym.make("Mancala-v0", max_episode_steps=100)
-    base_env = env.unwrapped
-    base_env.start_in_play_mode_initial(serialised_form)
+    base_env = get_gym_env()
+    base_env.start_in_play_mode_midgame(serialised_form)
     return base_env
+
+
+def get_gym_env() -> gym.Env:
+    return gym.make(
+        "Mancala-v0",
+        max_episode_steps=100,
+        opponent_policy=lambda _: None,
+        is_play_mode=True,
+    ).unwrapped
 
 
 if __name__ == "__main__":

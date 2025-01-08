@@ -4,42 +4,11 @@ import gymnasium as gym
 import itertools as it
 from enum import Enum
 
-from stable_baselines3 import DQN
-
 
 class GameOutcome(Enum):
     WIN = "win"
     DRAW = "draw"
     LOSE = "lose"
-
-
-def random_opponent_policy(seed: int, observation: np.array) -> int:
-    # Depends on the opponent side being the last (but one) six elements of the observation
-    opponent_side = observation[-7:-1]
-    assert sum(opponent_side) > 0, "Opponent has no valid moves"
-
-    random_action = np.random.randint(0, 6)
-    while opponent_side[random_action] == 0:
-        random_action = np.random.randint(0, 6)
-
-    return random_action
-
-
-def saved_opponent_policy(seed: int, observation: np.array) -> int:
-    opponent_side = observation[-7:-1]
-    assert sum(opponent_side) > 0, "Opponent has no valid moves"
-
-    model_path = "./saved_models/2024-12-29_09-11-33/"
-    # Can probably speed up training by not repeating this loading!
-    model = DQN.load(f"{model_path}/best_model")
-
-    action, _ = model.predict(observation, deterministic=True)
-
-    # Use random if opponent model is trying to play invalid move
-    while opponent_side[action] == 0:
-        action = np.random.randint(0, 6)
-
-    return int(action)
 
 
 def generate_action_sequence(action: int, total_gems: int) -> list[tuple[int, int]]:
@@ -99,16 +68,22 @@ def make_valid_action(
 class MancalaEnv(gym.Env):
     def __init__(
         self,
-        seed: int = None,
-        opponent_policy: Callable = saved_opponent_policy,
+        opponent_policy: Callable,
+        seed: int,
+        # TODO: improve interface
+        is_play_mode: bool,
     ):
         self.metadata = {"render_modes": ["None"]}
         self.render_mode = None
 
         self._opponent_policy = opponent_policy
 
-        # Initialise env state. If custom seed needed, reset should be called again with that.
-        self.reset(seed=seed)
+        if is_play_mode:
+            # Not actually used yet
+            self.start_in_play_mode_initial(True)
+        else:
+            # Initialise env state. If custom seed needed, reset should be called again with that.
+            self.reset(seed=seed)
 
         # TODO: Switch to dict later if it seems better
         self.observation_space = gym.spaces.MultiDiscrete(np.array([49] * 14))
@@ -293,9 +268,6 @@ class MancalaEnv(gym.Env):
         self._is_player_turn = True
 
         return self._get_obs(), {}
-
-    def set_opponent_policy(self, policy: Any):
-        self._opponent_policy = policy
 
     def _record(self):
         self.history.append(
