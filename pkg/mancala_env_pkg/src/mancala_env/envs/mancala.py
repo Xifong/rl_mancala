@@ -70,7 +70,7 @@ class MancalaEnv(gym.Env):
         self,
         opponent_policy: Callable,
         seed: int,
-        # TODO: improve interface
+        # TODO: improve interface so that you can directly initialise play mode without calling subsequent methods
         is_play_mode: bool,
     ):
         self.metadata = {"render_modes": ["None"]}
@@ -79,7 +79,7 @@ class MancalaEnv(gym.Env):
         self._opponent_policy = opponent_policy
 
         if is_play_mode:
-            # Not actually used yet
+            # TODO: Not actually used because inference server will run this againt to supply correct initial player
             self.start_in_play_mode_initial(True)
         else:
             # Initialise env state. If custom seed needed, reset should be called again with that.
