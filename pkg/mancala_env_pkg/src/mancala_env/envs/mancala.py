@@ -110,9 +110,9 @@ class MancalaEnv(gym.Env):
 
     def _get_info(self) -> dict:
         info = {}
-        info["is_success"] = self._game_outcome == GameOutcome.WIN
-        info["is_draw"] = self._game_outcome == GameOutcome.DRAW
-        info["is_loss"] = self._game_outcome == GameOutcome.LOSE
+        info["is_success"] = self._current_game_outcome == GameOutcome.WIN
+        info["is_draw"] = self._current_game_outcome == GameOutcome.DRAW
+        info["is_loss"] = self._current_game_outcome == GameOutcome.LOSE
 
         return info
 
@@ -144,7 +144,7 @@ class MancalaEnv(gym.Env):
         return False
 
     @property
-    def _game_outcome(self) -> str:
+    def _current_game_outcome(self) -> str:
         if self._player_score > self._opponent_score:
             return GameOutcome.WIN
 
@@ -155,12 +155,12 @@ class MancalaEnv(gym.Env):
 
     def _get_player_reward(self) -> float:
         if not self._is_game_over():
-            return 1.0 if self._game_outcome == GameOutcome.WIN else 0
+            return 1.0 if self._current_game_outcome == GameOutcome.WIN else 0
 
-        if self._game_outcome == GameOutcome.WIN:
+        if self._current_game_outcome == GameOutcome.WIN:
             return 100.0
 
-        if self._game_outcome == GameOutcome.DRAW:
+        if self._current_game_outcome == GameOutcome.DRAW:
             return 0
 
         return -100.0

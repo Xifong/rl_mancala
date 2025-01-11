@@ -11,8 +11,11 @@ import pkg.mancala_agent_pkg.model.save as save
 
 OPPONENT_MODEL_NAME = "opponent"
 
+
 # I believe that even in evaluation the opponent itself should not be deterministic
 opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministic=False)
+# opponent_policy = op.random_opponent_policy
+
 
 env = gym.make(
     "Mancala-v0",
@@ -20,6 +23,7 @@ env = gym.make(
     opponent_policy=opponent_policy,
 )
 check_env(env)
+
 
 eval_env = Monitor(
     gym.make(
@@ -40,8 +44,10 @@ eval_callback = EvalCallback(
     render=False,
 )
 
+
 model = DQN("MlpPolicy", env, verbose=1)
 model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
+
 
 # Assumes that an EvalCallback has been used
 save.save_run()
