@@ -11,12 +11,13 @@ import pkg.mancala_agent_pkg.model.save as save
 
 OPPONENT_MODEL_NAME = "opponent"
 
+# I believe that even in evaluation the opponent itself should not be deterministic
+opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministic=False)
+
 env = gym.make(
     "Mancala-v0",
     max_episode_steps=100,
-    opponent_policy=op.get_saved_opponent_policy(
-        OPPONENT_MODEL_NAME, deterministic=False
-    ),
+    opponent_policy=opponent_policy,
 )
 check_env(env)
 
@@ -24,12 +25,8 @@ eval_env = Monitor(
     gym.make(
         "Mancala-v0",
         max_episode_steps=100,
-        opponent_policy=op.get_saved_opponent_policy(
-            OPPONENT_MODEL_NAME,
-            # I believe that even in evaluation the opponent itself should not be deterministic
-            deterministic=False,
-        ),
-    )
+        opponent_policy=opponent_policy,
+    ),
 )
 
 
