@@ -1,13 +1,9 @@
 import numpy as np
-import os
-from stable_baselines3 import DQN
 
 from pkg.mancala_agent_pkg.model.infer import load_model
 
 
-def random_opponent_policy(seed: int, observation: np.array) -> int:
-    # Depends on the opponent side being the last (but one) six elements of the observation
-    opponent_side = observation[-7:-1]
+def get_random_valid_move(opponent_side: np.array) -> int:
     assert sum(opponent_side) > 0, "Opponent has no valid moves"
 
     random_action = np.random.randint(0, 6)
@@ -17,22 +13,29 @@ def random_opponent_policy(seed: int, observation: np.array) -> int:
     return random_action
 
 
-# change to pathlib.Path
-def get_saved_opponent_policy(model_name: str):
+# Observation from the perspective of the opponent
+def random_opponent_policy(seed: int, observation: np.array) -> int:
+    # Extract opponent side
+    return get_random_valid_move(observation[:6])
+
+
+def get_saved_opponent_policy(model_name: str, deterministic: bool = False):
     model = load_model(model_name)
 
+    # Observation from the perspective of the opponent
     def saved_opponent_policy(seed: int, observation: np.array) -> int:
         nonlocal model
 
-        opponent_side = observation[-7:-1]
+        # TODO: extract these using a more sensible shared interface
+        # Extract opponent side
+        opponent_side = observation[:6]
         assert sum(opponent_side) > 0, "Opponent has no valid moves"
 
-        action, _ = model.predict(observation, deterministic=True)
+        action, _ = model.predict(observation, deterministic=deterministic)
+        assert action >= 0 and action <= 5, f"Action {action} was not in correct range"
 
-        # Use random if opponent model is trying to play invalid move
-        while opponent_side[action] == 0:
-            # TODO: log when these fallbacks are happening
-            action = np.random.randint(0, 6)
+        if opponent_side[action] == 0:
+            action = get_random_valid_move(opponent_side)
 
         return int(action)
 

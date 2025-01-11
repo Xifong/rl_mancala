@@ -1,5 +1,9 @@
 # Todo next
 
+* Focus on correctness and testing of env/training
+    - Latest bugs have shown me that having a more robust way to check that the things are genuinely correct is critical
+    - Rendering + unit tests
+    - Possible refactor of environment to reduce complexity and chance of bugs
 * Fix the broken hatch build of the env (it's causing docker builds of the api to fail + repeat
   registration of the env with gymnasium to be needed. The whl has 5 bytes after being built!)
 * have all outs go to `out` dir

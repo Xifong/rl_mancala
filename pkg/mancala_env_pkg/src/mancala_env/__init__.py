@@ -5,7 +5,7 @@ from gymnasium.envs.registration import register
 # TODO: find a way to force clients to supply an opponent_policy without befouling
 # the env checker
 def placeholder_policy(seed: Any, _: Any):
-    return 0
+    return -1
 
 
 register(

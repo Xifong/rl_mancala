@@ -46,6 +46,9 @@ def make_valid_action(
 
     gems = entity_side[action]
     sequence = generate_action_sequence(action, gems)
+    assert (
+        len(sequence) > 0
+    ), f"could not generate action sequence for action '{action}' on player board side: '{entity_side}'"
 
     entity_side[action] = 0
     current_state = [entity_side, [entity_score], entity_opponent_side]
@@ -79,7 +82,7 @@ class MancalaEnv(gym.Env):
         self._opponent_policy = opponent_policy
 
         if is_play_mode:
-            # TODO: Not actually used because inference server will run this againt to supply correct initial player
+            # TODO: Not actually used because inference server will run this again to supply correct initial player
             self.start_in_play_mode_initial(True)
         else:
             # Initialise env state. If custom seed needed, reset should be called again with that.
@@ -95,6 +98,14 @@ class MancalaEnv(gym.Env):
             + [self._player_score]
             + self._opponent_side
             + [self._opponent_score]
+        )
+
+    def _get_opponent_obs(self) -> np.array:
+        return np.array(
+            self._opponent_side
+            + [self._opponent_score]
+            + self._player_side
+            + [self._player_score]
         )
 
     def _get_info(self) -> dict:
@@ -157,9 +168,14 @@ class MancalaEnv(gym.Env):
     def _opponent_takes_turn_if_not_game_over(self):
         plays_again = True
         while plays_again and not self._is_game_over():
-            plays_again = self._make_entity_action(
-                self._opponent_policy(self._seed, self._get_obs()), is_player=False
+            opponent_action = self._opponent_policy(
+                self._seed, self._get_opponent_obs()
             )
+            assert self._is_opponent_action_valid(
+                opponent_action
+            ), f"opponent action '{opponent_action}' was not valid on opponent board side: '{self._opponent_side}'"
+            plays_again = self._make_entity_action(opponent_action, is_player=False)
+        self._is_player_turn = True
 
     def step(self, action: int) -> tuple[list[int], float, bool, bool, dict]:
         assert (
@@ -168,7 +184,7 @@ class MancalaEnv(gym.Env):
 
         # No state change happens on invalid moves, but a negative reward is received
         # Hopefully this will be enough to learn to produce only valid moves
-        if not self._is_action_valid(action):
+        if not self._is_player_action_valid(action):
             return (
                 self._get_obs(),
                 -1.0,
@@ -180,6 +196,7 @@ class MancalaEnv(gym.Env):
         player_plays_again = self._make_entity_action(action, is_player=True)
 
         if not player_plays_again:
+            self._is_player_turn = False
             self._opponent_takes_turn_if_not_game_over()
 
         return (
@@ -195,7 +212,7 @@ class MancalaEnv(gym.Env):
             not self._is_game_over()
         ), "Attempting to step game even though game is over"
 
-        assert self._is_action_valid(
+        assert self._is_player_action_valid(
             action
         ), "the action sent to step the env during play is invalid"
 
@@ -206,8 +223,11 @@ class MancalaEnv(gym.Env):
             # negation ensures the player will not play again if the is_player=False entity gets another turn
             self._is_player_turn = not self._make_entity_action(action, is_player=False)
 
-    def _is_action_valid(self, action: int) -> bool:
+    def _is_player_action_valid(self, action: int) -> bool:
         return self._player_side[action] > 0
+
+    def _is_opponent_action_valid(self, action: int) -> bool:
+        return self._opponent_side[action] > 0
 
     def _set_seed(self, seed: int):
         self._seed = seed
@@ -221,7 +241,7 @@ class MancalaEnv(gym.Env):
             "player_score": self._player_score,
             "opponent_score": self._opponent_score,
             # Always False since the opponent play always assumed to have happened
-            "opponent_to_start": False,
+            "opponent_to_start": not self._is_player_turn,
         }
 
     def _deserialise(self, serialised_form: dict) -> bool:
@@ -258,14 +278,10 @@ class MancalaEnv(gym.Env):
         self._start_new_history()
 
         # Decide who starts at random
-        _does_opponent_start = True if self.np_random.integers(low=0, high=2) else False
+        self._is_player_turn = True if self.np_random.integers(low=0, high=2) else False
 
-        if _does_opponent_start:
-            self._make_entity_action(
-                self._opponent_policy(seed, self._get_obs()), is_player=False
-            )
-
-        self._is_player_turn = True
+        if not self._is_player_turn:
+            self._opponent_takes_turn_if_not_game_over()
 
         return self._get_obs(), {}
 

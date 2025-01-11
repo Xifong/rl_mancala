@@ -14,11 +14,23 @@ OPPONENT_MODEL_NAME = "opponent"
 env = gym.make(
     "Mancala-v0",
     max_episode_steps=100,
-    opponent_policy=op.get_saved_opponent_policy(OPPONENT_MODEL_NAME),
+    opponent_policy=op.get_saved_opponent_policy(
+        OPPONENT_MODEL_NAME, deterministic=False
+    ),
 )
 check_env(env)
 
-eval_env = Monitor(gym.make("Mancala-v0", max_episode_steps=100))
+eval_env = Monitor(
+    gym.make(
+        "Mancala-v0",
+        max_episode_steps=100,
+        opponent_policy=op.get_saved_opponent_policy(
+            OPPONENT_MODEL_NAME,
+            # I believe that even in evaluation the opponent itself should not be deterministic
+            deterministic=False,
+        ),
+    )
+)
 
 
 eval_callback = EvalCallback(
@@ -26,13 +38,13 @@ eval_callback = EvalCallback(
     best_model_save_path=save.last_run_path,
     log_path=save.last_run_path,
     eval_freq=5000,
-    n_eval_episodes=50,
+    n_eval_episodes=80,
     deterministic=True,
     render=False,
 )
 
 model = DQN("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=1_000, log_interval=4, callback=eval_callback)
+model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
 
 # Assumes that an EvalCallback has been used
 save.save_run()

@@ -9,9 +9,8 @@ Use at risk (setup script untested). Also assumes you can use CUDA.
 ```
 
 ## Train
-From development venv:
 ```bash
-python3 -m pkg.mancala_agent_pkg.model.train
+export TARGET_VENV=venv && ./build/env/local_build.sh && python3 -m pkg.mancala_agent_pkg.model.train
 ```
 The agent will be evaluated periodically during training, with the best on-policy evaluation (by mean reward) being saved into `./saved_models/`. View a plot of training statistics under `./last_run/plots.png`.
 
@@ -27,7 +26,7 @@ This is already done at the end of training, but can be forced to iterate on the
 From any venv (doesn't matter):
 ### Locally
 ```bash
-./build/env/local_build.sh && python -m pkg.mancala_agent_pkg.inference_api.server 
+export TARGET_VENV="inference_venv" && ./build/env/local_build.sh && python -m pkg.mancala_agent_pkg.inference_api.server 
 ```
 
 ### Locally in Docker
