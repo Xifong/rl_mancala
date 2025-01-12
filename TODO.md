@@ -1,15 +1,19 @@
 # Todo next
 
+* Try out RLZoo for hyperparameter tuning
+* command line options to train (i.e. set opponent and starting model etc)
 * Focus on correctness and testing of env/training
     - Latest bugs have shown me that having a more robust way to check that the things are genuinely correct is critical
     - Rendering + unit tests
     - Possible refactor of environment to reduce complexity and chance of bugs
-* Fix the broken hatch build of the env (it's causing docker builds of the api to fail + repeat
-  registration of the env with gymnasium to be needed. The whl has 5 bytes after being built!)
+* When saving model through EvalCallback, save the replay buffer too for less disjointed initial training.
+* Improve loading of models into inference api:
+    - Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket
+    - Just export the policy, don't even export the model
+    - Maybe above will allow us to eliminate some more inference dependencies?
+
 * have all outs go to `out` dir
 * Split api out of mancala_agent_pkg
-* Get minimal dependencies for deploying inference
-    - Leave out torch gpu stuff
 * add some unit tests to test:
     - normal sequence play
     - turn repeat
@@ -19,5 +23,4 @@
     - don't put gems in opponent mancala
     - starting state is correct
     - Note on implementation: will need a way to set the opponent policy to be deterministic and known
-* check that self-play against the previously trained model will work.
-    - i.e. ensure you can set the opponent policy from a previously trained model
+* All the inline TODOS!

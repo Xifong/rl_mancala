@@ -8,6 +8,7 @@ from stable_baselines3.common.monitor import Monitor
 
 import pkg.mancala_agent_pkg.model.opponent_policy as op
 import pkg.mancala_agent_pkg.model.save as save
+import pkg.mancala_agent_pkg.model.infer as infer
 
 OPPONENT_MODEL_NAME = "opponent"
 
@@ -45,7 +46,9 @@ eval_callback = EvalCallback(
 )
 
 
-model = DQN("MlpPolicy", env, verbose=1)
+model = infer.load_model("train_from")
+# model = DQN("MlpPolicy", env, verbose=1)
+model.set_env(env, force_reset=True)
 model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
 
 

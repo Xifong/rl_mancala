@@ -155,7 +155,7 @@ class MancalaEnv(gym.Env):
 
     def _get_player_reward(self) -> float:
         if not self._is_game_over():
-            return 1.0 if self._current_game_outcome == GameOutcome.WIN else 0
+            return max(self._player_score - self._opponent_score, -1.0)
 
         if self._current_game_outcome == GameOutcome.WIN:
             return 100.0
