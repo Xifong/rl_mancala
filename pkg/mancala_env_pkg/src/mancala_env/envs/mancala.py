@@ -3,6 +3,9 @@ import numpy as np
 import gymnasium as gym
 import itertools as it
 from enum import Enum
+import uuid
+
+from . import env_logging
 
 
 class GameOutcome(Enum):
@@ -199,6 +202,10 @@ class MancalaEnv(gym.Env):
             self._is_player_turn = False
             self._opponent_takes_turn_if_not_game_over()
 
+        self.logger.debug(self._get_obs())
+        if self._is_game_over():
+            self.logger.debug("finished a game")
+
         return (
             self._get_obs(),
             self._get_player_reward(),
@@ -263,15 +270,19 @@ class MancalaEnv(gym.Env):
         self._record()
 
     def start_in_play_mode_initial(self, is_player_turn: bool):
+        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
         self._set_board_initial_state()
         self._start_new_history()
         self._is_player_turn = is_player_turn
 
     def start_in_play_mode_midgame(self, game_state: dict):
+        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
         self._is_player_turn = self._deserialise(game_state)
         self._start_new_history()
 
     def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
+        # Set a new logger uuid
+        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
         self._set_seed(seed)
 
         self._set_board_initial_state()

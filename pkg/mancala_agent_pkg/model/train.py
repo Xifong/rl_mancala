@@ -1,3 +1,4 @@
+import logging
 import gymnasium as gym
 
 import mancala_env
@@ -10,9 +11,14 @@ import pkg.mancala_agent_pkg.model.opponent_policy as op
 import pkg.mancala_agent_pkg.model.save as save
 import pkg.mancala_agent_pkg.model.infer as infer
 
+logging.basicConfig(
+    filename=f"./{save.get_last_run_path()}/env.log",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+
+
 OPPONENT_MODEL_NAME = "opponent"
-
-
 # I believe that even in evaluation the opponent itself should not be deterministic
 opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministic=False)
 # opponent_policy = op.random_opponent_policy
@@ -37,8 +43,8 @@ eval_env = Monitor(
 
 eval_callback = EvalCallback(
     eval_env,
-    best_model_save_path=save.last_run_path,
-    log_path=save.last_run_path,
+    best_model_save_path=save.get_last_run_path(),
+    log_path=save.get_last_run_path(),
     eval_freq=5000,
     n_eval_episodes=80,
     deterministic=True,
@@ -49,7 +55,7 @@ eval_callback = EvalCallback(
 model = infer.load_model("train_from")
 # model = DQN("MlpPolicy", env, verbose=1)
 model.set_env(env, force_reset=True)
-model.learn(total_timesteps=100_000, log_interval=4, callback=eval_callback)
+model.learn(total_timesteps=1_000, log_interval=4, callback=eval_callback)
 
 
 # Assumes that an EvalCallback has been used

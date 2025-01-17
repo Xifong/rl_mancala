@@ -1,7 +1,9 @@
+.python-version
 *venv/
 **/dist/
 **/__pycache__/
 **/*.zip 
 **/last_run/
+**/last_rl_zoo3_run/
 **/saved_models/
 **/tmp/
