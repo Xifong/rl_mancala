@@ -16,7 +16,11 @@ opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministi
 # In this cas to use the correct opponent_policy
 register(
     id="Mancala-v0",
-    kwargs={"seed": None, "opponent_policy": opponent_policy, "is_play_mode": False},
+    kwargs={
+        "seed": None,
+        "opponent_policy": opponent_policy,
+        "is_play_mode": False,
+    },
     entry_point="mancala_env.envs:MancalaEnv",
 )
 

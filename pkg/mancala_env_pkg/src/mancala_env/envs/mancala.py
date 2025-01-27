@@ -183,29 +183,38 @@ class MancalaEnv(gym.Env):
     def step(self, action: int) -> tuple[list[int], float, bool, bool, dict]:
         assert (
             not self._is_game_over()
-        ), "Attempting to step game even though game is over"
+        ), "attempting to step game even though game is over"
 
         # No state change happens on invalid moves, but a negative reward is received
-        # Hopefully this will be enough to learn to produce only valid moves
+        # Truncate after 10 consecutive invalid actions
         if not self._is_player_action_valid(action):
+            self.logger.debug(f"player attempted invalid action: '{action}'")
+            self._invalid_count += 1
             return (
                 self._get_obs(),
                 -1.0,
                 False,
-                False,
+                self._invalid_count >= 10,
                 self._get_info(),
             )
+        self._invalid_count = 0
 
         player_plays_again = self._make_entity_action(action, is_player=True)
 
         if not player_plays_again:
             self._is_player_turn = False
             self._opponent_takes_turn_if_not_game_over()
+        else:
+            self.logger.debug(
+                "only player will play on this step since they get to take an extra turn"
+            )
 
-        self.logger.debug(self._get_obs())
+        self.logger.debug(self.get_serialised_form())
         if self._is_game_over():
             self.logger.debug("finished a game")
 
+        self.logger.debug(f"step '{self._valid_step_count}' complete")
+        self._valid_step_count += 1
         return (
             self._get_obs(),
             self._get_player_reward(),
@@ -265,6 +274,8 @@ class MancalaEnv(gym.Env):
         self._opponent_score = 0
 
     def _start_new_history(self):
+        self._valid_step_count = 0
+        self._invalid_count = 0
         self.history = []
         # record initial env state
         self._record()
@@ -274,11 +285,13 @@ class MancalaEnv(gym.Env):
         self._set_board_initial_state()
         self._start_new_history()
         self._is_player_turn = is_player_turn
+        self.logger.debug(f"Initial state: '{self.get_serialised_form()}'")
 
     def start_in_play_mode_midgame(self, game_state: dict):
         self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
         self._is_player_turn = self._deserialise(game_state)
         self._start_new_history()
+        self.logger.debug(f"Initial state: '{self.get_serialised_form()}'")
 
     def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
         # Set a new logger uuid
@@ -294,6 +307,7 @@ class MancalaEnv(gym.Env):
         if not self._is_player_turn:
             self._opponent_takes_turn_if_not_game_over()
 
+        self.logger.debug(f"Initial state: '{self.get_serialised_form()}'")
         return self._get_obs(), {}
 
     def _record(self):
