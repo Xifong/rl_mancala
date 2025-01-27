@@ -1,3 +1,14 @@
+# Kinda tuned
 Mancala-v0:
   n_timesteps: !!float 5e4
   policy: 'MlpPolicy'
+  learning_rate: 0.0017660683439426617
+  batch_size: 100
+  buffer_size: 10000
+  learning_starts: 1000
+  gamma: 0.98
+  target_update_interval: 5000
+  train_freq: 256
+  exploration_fraction: 0.15885316212408052
+  exploration_final_eps: 0.1533784902718015
+  policy_kwargs: "dict(net_arch=[256, 256])"

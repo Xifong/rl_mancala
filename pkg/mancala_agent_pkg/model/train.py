@@ -19,9 +19,10 @@ logging.basicConfig(
 
 
 OPPONENT_MODEL_NAME = "opponent"
+
 # I believe that even in evaluation the opponent itself should not be deterministic
-opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministic=False)
-# opponent_policy = op.random_opponent_policy
+# opponent_policy = op.get_saved_opponent_policy(OPPONENT_MODEL_NAME, deterministic=False)
+opponent_policy = op.random_opponent_policy
 
 
 env = gym.make(
@@ -51,11 +52,30 @@ eval_callback = EvalCallback(
     render=False,
 )
 
+policy_kwargs = dict(net_arch=[256, 256])
 
-model = infer.load_model("train_from")
-# model = DQN("MlpPolicy", env, verbose=1)
+# model = infer.load_model("train_from")
+model = DQN(
+    "MlpPolicy",
+    env,
+    verbose=1,
+    #     learning_rate=0.0017660683439426617,
+    #     batch_size=100,
+    #     buffer_size=10000,
+    #     learning_starts=1000,
+    #     gamma=0.98,
+    #     target_update_interval=5000,
+    #     train_freq=256,
+    #     exploration_fraction=0.15885316212408052,
+    #     exploration_final_eps=0.1533784902718015,
+    #     policy_kwargs=policy_kwargs,
+)
 model.set_env(env, force_reset=True)
-model.learn(total_timesteps=1_000, log_interval=4, callback=eval_callback)
+model.learn(
+    total_timesteps=50_000,
+    log_interval=4,
+    callback=eval_callback,
+)
 
 
 # Assumes that an EvalCallback has been used

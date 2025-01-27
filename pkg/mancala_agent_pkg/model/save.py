@@ -19,18 +19,16 @@ def mkdir_r_p(path: str):
     os.makedirs(path)
 
 
-cleared = False
-
-
 # Using an lru cache to ensure the side-effect of deleting and creating the directory only happens once
 @lru_cache(maxsize=1)
-def get_last_run_path(last_run_path="./last_run"):
-    mkdir_r_p(last_run_path)
+def get_last_run_path(new_run=True, last_run_path="./last_run"):
+    if new_run:
+        mkdir_r_p(last_run_path)
     return last_run_path
 
 
-def generate_plots():
-    last_run_path = get_last_run_path()
+def generate_plots(new_run: bool):
+    last_run_path = get_last_run_path(new_run)
 
     evauluations_path = f"{last_run_path}/evaluations.npz"
     if not os.path.isfile(evauluations_path):
@@ -49,7 +47,7 @@ def generate_plots():
         )
         axes[0].plot(timesteps, results)
         axes[0].set_ylabel("reward")
-        axes[0].set_ylim(-100, 130)
+        axes[0].set_ylim(-100, 180)
 
         axes[1].plot(timesteps, ep_lengths)
         axes[1].set_ylabel("episode length")
@@ -62,8 +60,8 @@ def generate_plots():
         plt.savefig(f"{last_run_path}/plots.png")
 
 
-def save_files():
-    last_run_path = get_last_run_path()
+def save_files(new_run: bool):
+    last_run_path = get_last_run_path(new_run)
     now = f"{datetime.now():%Y-%m-%d_%H-%M-%S}"
     mkdir_r_p(f"./saved_models/{now}/")
     for file in os.listdir(last_run_path):
@@ -75,9 +73,10 @@ def save_files():
 
 
 def save_run():
-    generate_plots()
-    save_files()
+    generate_plots(new_run=True)
+    save_files(new_run=True)
 
 
 if __name__ == "__main__":
-    save_run()
+    generate_plots(new_run=False)
+    save_files(new_run=False)
