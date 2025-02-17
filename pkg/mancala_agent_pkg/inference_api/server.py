@@ -1,10 +1,11 @@
+import logging
 import os
 import json
 from typing import Any
 from flask import Flask, request, abort
 
 import gymnasium as gym
-import mancala_env
+import mancala_env  # noqa: F401 (mancala_env is in fact used)
 
 from pkg.mancala_agent_pkg.model import infer as model
 

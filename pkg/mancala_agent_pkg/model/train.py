@@ -1,7 +1,7 @@
 import logging
 import gymnasium as gym
 
-import mancala_env
+import mancala_env  # noqa: F401 (mancala_env is in fact used)
 from stable_baselines3 import DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import EvalCallback
