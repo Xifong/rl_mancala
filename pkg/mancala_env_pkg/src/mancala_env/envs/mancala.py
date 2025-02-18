@@ -256,16 +256,15 @@ class MancalaEnv(gym.Env):
             "opponent_side": self._opponent_side,
             "player_score": self._player_score,
             "opponent_score": self._opponent_score,
-            # Always False since the opponent play always assumed to have happened
             "opponent_to_start": not self._is_player_turn,
         }
 
     def _deserialise(self, serialised_form: dict) -> bool:
-        self._player_side = serialised_form["player_side"]
-        self._opponent_side = serialised_form["opponent_side"]
-        self._player_score = serialised_form["player_score"]
-        self._opponent_score = serialised_form["opponent_score"]
-        return serialised_form["opponent_to_start"]
+        self._player_side = serialised_form.player_side
+        self._opponent_side = serialised_form.opponent_side
+        self._player_score = serialised_form.player_score
+        self._opponent_score = serialised_form.opponent_score
+        return not serialised_form.opponent_to_start
 
     def _set_board_initial_state(self):
         self._player_side = [4] * 6

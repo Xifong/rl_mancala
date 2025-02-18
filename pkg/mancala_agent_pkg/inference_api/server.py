@@ -1,4 +1,4 @@
-import logging
+from pydantic import BaseModel, NonNegativeInt, ValidationError, Field
 import os
 import json
 from typing import Any
@@ -22,31 +22,71 @@ def add_header(response):
     return response
 
 
-@app.route("/api/initial_state", methods=["POST"])
+@app.route("/api/initial_state", methods=["GET"])
 def get_initial_state():
-    if not request.data:
-        abort(400)
+    args = request.args
 
-    data = json.loads(request.data)
-    is_player_turn = data["is-agent-turn"]
+    query_param = "is-agent-turn"
+
+    if len(args) <= 0:
+        return f"must supply an '{query_param}' query param", 400
+
+    if len(args) > 1:
+        return f"must only supply an '{query_param}' query param", 400
+
+    query_value = args.get(query_param, None)
+    if query_value is None:
+        return f"must supply '{query_param}' query param", 400
+
+    if query_value == "true":
+        is_player_turn = True
+    elif query_value == "false":
+        is_player_turn = False
+    else:
+        return (
+            f"'{query_param}' must be value in {{true, false}}, not '{query_value}'",
+            400,
+        )
+
     env = get_gym_env()
-    env.start_in_play_mode_initial(is_player_turn)
+    env.start_in_play_mode_initial(is_player_turn=is_player_turn)
     return env.get_serialised_form()
 
 
-@app.route("/api/next_state", methods=["POST"])
+class BoardState(BaseModel):
+    player_score: NonNegativeInt
+    player_side: list[NonNegativeInt]
+    opponent_score: NonNegativeInt
+    opponent_side: list[NonNegativeInt]
+    opponent_to_start: bool
+
+
+class NextStateRequest(BaseModel):
+    current_state: BoardState = Field(alias="current-state")
+    action: NonNegativeInt
+
+
+@app.route("/api/next_state", methods=["PUT"])
 def get_next_env_state():
     if not request.data:
-        abort(400)
+        return "body must contain data", 400
 
-    data = json.loads(request.data)
-    serialised_env, action_to_play = data["current-state"], data["action"]
-    env = deserialise_env(serialised_env)
-    env.step_in_play_mode(action_to_play)
+    try:
+        data = json.loads(request.data)
+    except json.JSONDecodeError as e:
+        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
+
+    try:
+        stateRequest = NextStateRequest(**data)
+    except ValidationError as e:
+        return f"could not unmarshal body data: '{e.errors()}'", 400
+
+    env = deserialise_env(stateRequest.current_state)
+    env.step_in_play_mode(stateRequest.action)
     return env.get_serialised_form()
 
 
-@app.route("/api/next_move", methods=["POST"])
+@app.route("/api/next_move", methods=["PUT"])
 def get_next_move():
     if not request.data:
         abort(400)

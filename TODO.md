@@ -19,10 +19,20 @@
 * More reward tweaking (should there be a reward for captures/getting to play again?)
 
 ## Service Improvements
+~~* Switch all the POST to PUT requests to reflect that these are idempotent~~
+~~* and getInitialState can probably be a GET request really~~
+~~* Seems like there's a backend bug where it plays on the wrong side :/~~
+~~* Backend for next_state should check the body conforms to expectations~~
+* Backend should use strictest validation mode
+* Backend for next_move should check the body conforms to expectations
+* Backend for get requests should also use pydantic validation
+* Backend should say if game is over
+* Backend should say what move indexes are valid
+* Backend should reject playing moves from the wrong player/ensure the move is played on the correct player
 * Improve loading of models into inference api:
-    - Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket
-    - Just export the policy, don't even export the model
-    - Maybe above will allow us to eliminate some more inference dependencies?
+    * Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket
+    * Just export the policy, don't even export the model
+    * Maybe above will allow us to eliminate some more inference dependencies?
 * have all outs go to `out` dir
 * Split api out of mancala_agent_pkg
 
