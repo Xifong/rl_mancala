@@ -28,7 +28,7 @@
 ~~* Backend should use strictest validation mode~~
 ~* Backend should say if game is over~
 ~* Backend should say what move indexes are valid~
-* infer_from_observation should rotate board perspective as needed
+~* infer_from_observation should rotate board perspective as needed~
 * New endpoint for combined (play next move and get next)
 * Backend should reject playing moves from the wrong player/ensure the move is played on the correct player
 * Improve loading of models into inference api:
