@@ -1,9 +1,8 @@
 import os
-from typing import Any
 import gymnasium as gym
 import numpy as np
 
-import mancala_env
+import mancala_env  # noqa: F401 is used
 from stable_baselines3 import DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
 
@@ -17,6 +16,7 @@ def load_model(model: str) -> BaseAlgorithm:
     return DQN.load(model_path)
 
 
+# TODO: Should rotate the environment so that the prediction model can play from player perspective
 def infer_from_observation(observation: np.array) -> int:
     fresh_model = load_model("prod")
     action, _ = fresh_model.predict(observation, deterministic=False)

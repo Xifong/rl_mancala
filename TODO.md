@@ -23,9 +23,10 @@
 ~~* and getInitialState can probably be a GET request really~~
 ~~* Seems like there's a backend bug where it plays on the wrong side :/~~
 ~~* Backend for next_state should check the body conforms to expectations~~
-* Backend should use strictest validation mode
-* Backend for next_move should check the body conforms to expectations
-* Backend for get requests should also use pydantic validation
+~~* Backend for get requests should also use pydantic validation~~
+~* Backend for next_move should check the body conforms to expectations~
+~~* Backend should use strictest validation mode~~
+* infer_from_observation should rotate board perspective as needed
 * Backend should say if game is over
 * Backend should say what move indexes are valid
 * Backend should reject playing moves from the wrong player/ensure the move is played on the correct player

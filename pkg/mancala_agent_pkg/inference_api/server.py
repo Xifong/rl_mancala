@@ -1,8 +1,8 @@
-from pydantic import BaseModel, NonNegativeInt, ValidationError, Field
+from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
 import os
 import json
 from typing import Any
-from flask import Flask, request, abort
+from flask import Flask, request
 
 import gymnasium as gym
 import mancala_env  # noqa: F401 (mancala_env is in fact used)
@@ -22,38 +22,27 @@ def add_header(response):
     return response
 
 
+class GetInitialRequest(BaseModel):
+    # Allowing type coercion from "true" -> True etc
+    is_player_turn: bool = Field(alias="is-agent-turn")
+
+
 @app.route("/api/initial_state", methods=["GET"])
 def get_initial_state():
     args = request.args
 
-    query_param = "is-agent-turn"
-
-    if len(args) <= 0:
-        return f"must supply an '{query_param}' query param", 400
-
-    if len(args) > 1:
-        return f"must only supply an '{query_param}' query param", 400
-
-    query_value = args.get(query_param, None)
-    if query_value is None:
-        return f"must supply '{query_param}' query param", 400
-
-    if query_value == "true":
-        is_player_turn = True
-    elif query_value == "false":
-        is_player_turn = False
-    else:
-        return (
-            f"'{query_param}' must be value in {{true, false}}, not '{query_value}'",
-            400,
-        )
+    try:
+        initial_request = GetInitialRequest(**args)
+    except ValidationError as e:
+        return f"could not unmarshal request args: '{e.errors()}'", 400
 
     env = get_gym_env()
-    env.start_in_play_mode_initial(is_player_turn=is_player_turn)
+    env.start_in_play_mode_initial(is_player_turn=initial_request.is_player_turn)
     return env.get_serialised_form()
 
 
 class BoardState(BaseModel):
+    model_config = ConfigDict(strict=True)
     player_score: NonNegativeInt
     player_side: list[NonNegativeInt]
     opponent_score: NonNegativeInt
@@ -62,6 +51,7 @@ class BoardState(BaseModel):
 
 
 class NextStateRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
     current_state: BoardState = Field(alias="current-state")
     action: NonNegativeInt
 
@@ -77,23 +67,36 @@ def get_next_env_state():
         return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
 
     try:
-        stateRequest = NextStateRequest(**data)
+        state_request = NextStateRequest(**data)
     except ValidationError as e:
         return f"could not unmarshal body data: '{e.errors()}'", 400
 
-    env = deserialise_env(stateRequest.current_state)
-    env.step_in_play_mode(stateRequest.action)
+    env = deserialise_env(state_request.current_state)
+    env.step_in_play_mode(state_request.action)
     return env.get_serialised_form()
+
+
+class ActionRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    current_state: BoardState = Field(alias="current-state")
 
 
 @app.route("/api/next_move", methods=["PUT"])
 def get_next_move():
     if not request.data:
-        abort(400)
+        return "body must contain data", 400
 
-    data = json.loads(request.data)
-    serialised_env = data["current-state"]
-    env = deserialise_env(serialised_env)
+    try:
+        data = json.loads(request.data)
+    except json.JSONDecodeError as e:
+        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
+
+    try:
+        move_request = ActionRequest(**data)
+    except ValidationError as e:
+        return f"could not unmarshal body data: '{e.errors()}'", 400
+
+    env = deserialise_env(move_request.current_state)
     # TODO: not use internal method
     action = model.infer_from_observation(env._get_obs())
     return str(action)
