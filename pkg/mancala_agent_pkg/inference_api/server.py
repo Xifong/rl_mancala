@@ -1,13 +1,14 @@
-from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
 import os
 import json
 from typing import Any
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from dataclasses import asdict
+from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
 
 import gymnasium as gym
 import mancala_env  # noqa: F401 (mancala_env is in fact used)
 
-from pkg.mancala_agent_pkg.model import infer as model
+from pkg.mancala_agent_pkg.model.infer import get_action_to_play
 
 app = Flask(__name__)
 
@@ -89,26 +90,33 @@ def get_next_move():
     try:
         data = json.loads(request.data)
     except json.JSONDecodeError as e:
-        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
+        return f"could not load body data '{e.doc[:15]}', error {e}", 400
 
     try:
         move_request = ActionRequest(**data)
     except ValidationError as e:
-        return f"could not unmarshal body data: '{e.errors()}'", 400
+        return f"could not unmarshal body data: {e.errors()}", 400
 
-    env = deserialise_env(move_request.current_state)
-    # TODO: not use internal method
-    action = model.infer_from_observation(env._get_obs())
-    return str(action)
+    try:
+        env = deserialise_env(move_request.current_state)
+    except Exception as e:
+        return f"could not deserialise env: {e}", 400
+
+    try:
+        action = get_action_to_play(env)
+    except Exception as e:
+        return f"could not get action to play: {e}", 500
+
+    return jsonify(asdict(action))
 
 
-def deserialise_env(serialised_form: Any) -> gym.Env:
+def deserialise_env(serialised_form: Any) -> mancala_env.MancalaEnv:
     base_env = get_gym_env()
     base_env.start_in_play_mode_midgame(serialised_form)
     return base_env
 
 
-def get_gym_env() -> gym.Env:
+def get_gym_env() -> mancala_env.MancalaEnv:
     return gym.make(
         "Mancala-v0",
         max_episode_steps=100,

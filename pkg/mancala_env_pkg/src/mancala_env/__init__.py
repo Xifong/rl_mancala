@@ -1,5 +1,6 @@
 from typing import Any
 from gymnasium.envs.registration import register
+from mancala_env.envs.mancala import MancalaEnv
 
 
 # TODO: find a way to force clients to supply an opponent_policy without befouling

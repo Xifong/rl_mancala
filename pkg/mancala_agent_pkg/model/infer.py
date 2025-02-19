@@ -5,6 +5,7 @@ import numpy as np
 import mancala_env  # noqa: F401 is used
 from stable_baselines3 import DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
+from dataclasses import dataclass
 
 
 def load_model(model: str) -> BaseAlgorithm:
@@ -16,11 +17,24 @@ def load_model(model: str) -> BaseAlgorithm:
     return DQN.load(model_path)
 
 
-# TODO: Should rotate the environment so that the prediction model can play from player perspective
 def infer_from_observation(observation: np.array) -> int:
     fresh_model = load_model("prod")
     action, _ = fresh_model.predict(observation, deterministic=False)
     return int(action)
+
+
+@dataclass
+class ActionPlayed:
+    action: int
+    is_player_move: bool
+
+
+def get_action_to_play(env: mancala_env.MancalaEnv) -> ActionPlayed:
+    player_turn = not env.get_serialised_form()["opponent_to_start"]
+    if not player_turn:
+        raise ValueError("Cannot make inference from opponent perspective")
+
+    return ActionPlayed(infer_from_observation(env._get_obs()), True)
 
 
 if __name__ == "__main__":
