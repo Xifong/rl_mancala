@@ -1,14 +1,16 @@
 import os
 import json
-from typing import Any
-from flask import Flask, request, jsonify
 from dataclasses import asdict
+
+from flask import Flask, request, jsonify
 from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
 
-import gymnasium as gym
-import mancala_env  # noqa: F401 (mancala_env is in fact used)
-
-from pkg.mancala_agent_pkg.model.infer import get_action_to_play
+from pkg.mancala_agent_pkg.inference_api.infer import (
+    get_action_to_play,
+    get_fresh_env,
+    get_env_from,
+)
+from pkg.mancala_agent_pkg.inference_api.types import BoardState, PlayMetadata
 
 app = Flask(__name__)
 
@@ -21,20 +23,6 @@ def add_header(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
-
-
-class BoardState(BaseModel):
-    model_config = ConfigDict(strict=True)
-    player_score: NonNegativeInt
-    player_side: list[NonNegativeInt]
-    opponent_score: NonNegativeInt
-    opponent_side: list[NonNegativeInt]
-    opponent_to_start: bool
-
-
-class PlayMetadata(BaseModel):
-    model_config = ConfigDict(strict=True)
-    allowed_moves: list[NonNegativeInt]
 
 
 class GetInitialRequest(BaseModel):
@@ -57,8 +45,7 @@ def get_initial_state() -> str:
     except ValidationError as e:
         return f"could not unmarshal request args: '{e.errors()}'", 400
 
-    env = get_gym_env()
-    env.start_in_play_mode_initial(is_player_turn=initial_request.is_player_turn)
+    env = get_fresh_env(is_player_turn=initial_request.is_player_turn)
 
     return jsonify(
         BoardStateResponse(
@@ -89,7 +76,7 @@ def get_next_env_state() -> str:
     except ValidationError as e:
         return f"could not unmarshal body data: '{e.errors()}'", 400
 
-    env = deserialise_env(state_request.current_state)
+    env = get_env_from(state_request.current_state)
     env.step_in_play_mode(state_request.action)
 
     return jsonify(
@@ -121,33 +108,13 @@ def get_next_move() -> str:
         return f"could not unmarshal body data: {e.errors()}", 400
 
     try:
-        env = deserialise_env(move_request.current_state)
-    except Exception as e:
-        return f"could not deserialise env: {e}", 400
-
-    try:
-        action = get_action_to_play(env)
+        action = get_action_to_play(move_request.current_state)
     except ValueError as e:
         return f"could not get action to play: {e}", 400
     except Exception as e:
         return f"could not get action to play: {e}", 500
 
     return jsonify(asdict(action))
-
-
-def deserialise_env(serialised_form: Any) -> mancala_env.MancalaEnv:
-    base_env = get_gym_env()
-    base_env.start_in_play_mode_midgame(serialised_form)
-    return base_env
-
-
-def get_gym_env() -> mancala_env.MancalaEnv:
-    return gym.make(
-        "Mancala-v0",
-        max_episode_steps=100,
-        opponent_policy=lambda _: None,
-        is_play_mode=True,
-    ).unwrapped
 
 
 if __name__ == "__main__":

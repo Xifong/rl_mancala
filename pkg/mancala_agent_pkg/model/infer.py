@@ -23,23 +23,6 @@ def infer_from_observation(observation: np.array) -> int:
     return int(action)
 
 
-@dataclass
-class ActionPlayed:
-    action: int
-    was_opponent_move: bool
-
-
-def get_action_to_play(env: mancala_env.MancalaEnv) -> ActionPlayed:
-    env_details = env.get_serialised_form()
-    if env_details["opponent_to_start"]:
-        raise ValueError("Cannot make inference from opponent perspective")
-
-    if env_details["is_game_over"]:
-        raise ValueError("Cannot make inference when game is over")
-
-    return ActionPlayed(infer_from_observation(env._get_obs()), False)
-
-
 if __name__ == "__main__":
     env = gym.make("Mancala-v0", max_episode_steps=100)
     model = load_model("prod")
