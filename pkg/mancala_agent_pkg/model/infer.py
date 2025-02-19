@@ -26,15 +26,18 @@ def infer_from_observation(observation: np.array) -> int:
 @dataclass
 class ActionPlayed:
     action: int
-    is_player_move: bool
+    was_opponent_move: bool
 
 
 def get_action_to_play(env: mancala_env.MancalaEnv) -> ActionPlayed:
-    player_turn = not env.get_serialised_form()["opponent_to_start"]
-    if not player_turn:
+    env_details = env.get_serialised_form()
+    if env_details["opponent_to_start"]:
         raise ValueError("Cannot make inference from opponent perspective")
 
-    return ActionPlayed(infer_from_observation(env._get_obs()), True)
+    if env_details["is_game_over"]:
+        raise ValueError("Cannot make inference when game is over")
+
+    return ActionPlayed(infer_from_observation(env._get_obs()), False)
 
 
 if __name__ == "__main__":

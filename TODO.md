@@ -26,9 +26,10 @@
 ~~* Backend for get requests should also use pydantic validation~~
 ~* Backend for next_move should check the body conforms to expectations~
 ~~* Backend should use strictest validation mode~~
+~* Backend should say if game is over~
+~* Backend should say what move indexes are valid~
 * infer_from_observation should rotate board perspective as needed
-* Backend should say if game is over
-* Backend should say what move indexes are valid
+* New endpoint for combined (play next move and get next)
 * Backend should reject playing moves from the wrong player/ensure the move is played on the correct player
 * Improve loading of models into inference api:
     * Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket

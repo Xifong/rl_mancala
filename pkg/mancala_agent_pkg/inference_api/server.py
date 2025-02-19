@@ -23,25 +23,6 @@ def add_header(response):
     return response
 
 
-class GetInitialRequest(BaseModel):
-    # Allowing type coercion from "true" -> True etc
-    is_player_turn: bool = Field(alias="is-agent-turn")
-
-
-@app.route("/api/initial_state", methods=["GET"])
-def get_initial_state():
-    args = request.args
-
-    try:
-        initial_request = GetInitialRequest(**args)
-    except ValidationError as e:
-        return f"could not unmarshal request args: '{e.errors()}'", 400
-
-    env = get_gym_env()
-    env.start_in_play_mode_initial(is_player_turn=initial_request.is_player_turn)
-    return env.get_serialised_form()
-
-
 class BoardState(BaseModel):
     model_config = ConfigDict(strict=True)
     player_score: NonNegativeInt
@@ -51,6 +32,42 @@ class BoardState(BaseModel):
     opponent_to_start: bool
 
 
+class PlayMetadata(BaseModel):
+    model_config = ConfigDict(strict=True)
+    allowed_moves: list[NonNegativeInt]
+
+
+class GetInitialRequest(BaseModel):
+    # Allowing type coercion from "true" -> True etc
+    is_player_turn: bool = Field(alias="is-agent-turn")
+
+
+class BoardStateResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    current_state: BoardState
+    metadata: PlayMetadata
+
+
+@app.route("/api/initial_state", methods=["GET"])
+def get_initial_state() -> str:
+    args = request.args
+
+    try:
+        initial_request = GetInitialRequest(**args)
+    except ValidationError as e:
+        return f"could not unmarshal request args: '{e.errors()}'", 400
+
+    env = get_gym_env()
+    env.start_in_play_mode_initial(is_player_turn=initial_request.is_player_turn)
+
+    return jsonify(
+        BoardStateResponse(
+            current_state=env.get_serialised_form(),
+            metadata={"allowed_moves": env.get_allowed_moves()},
+        ).model_dump()
+    )
+
+
 class NextStateRequest(BaseModel):
     model_config = ConfigDict(strict=True)
     current_state: BoardState = Field(alias="current-state")
@@ -58,7 +75,7 @@ class NextStateRequest(BaseModel):
 
 
 @app.route("/api/next_state", methods=["PUT"])
-def get_next_env_state():
+def get_next_env_state() -> str:
     if not request.data:
         return "body must contain data", 400
 
@@ -74,7 +91,13 @@ def get_next_env_state():
 
     env = deserialise_env(state_request.current_state)
     env.step_in_play_mode(state_request.action)
-    return env.get_serialised_form()
+
+    return jsonify(
+        BoardStateResponse(
+            current_state=env.get_serialised_form(),
+            metadata={"allowed_moves": env.get_allowed_moves()},
+        ).model_dump()
+    )
 
 
 class ActionRequest(BaseModel):
@@ -83,7 +106,7 @@ class ActionRequest(BaseModel):
 
 
 @app.route("/api/next_move", methods=["PUT"])
-def get_next_move():
+def get_next_move() -> str:
     if not request.data:
         return "body must contain data", 400
 
@@ -104,6 +127,8 @@ def get_next_move():
 
     try:
         action = get_action_to_play(env)
+    except ValueError as e:
+        return f"could not get action to play: {e}", 400
     except Exception as e:
         return f"could not get action to play: {e}", 500
 

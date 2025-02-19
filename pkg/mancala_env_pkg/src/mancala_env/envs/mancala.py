@@ -239,6 +239,10 @@ class MancalaEnv(gym.Env):
             # negation ensures the player will not play again if the is_player=False entity gets another turn
             self._is_player_turn = not self._make_entity_action(action, is_player=False)
 
+    def get_allowed_moves(self) -> list[int]:
+        side = self._player_side if self._is_player_turn else self._opponent_side
+        return [action_index for action_index, gems in enumerate(side) if gems > 0]
+
     def _is_player_action_valid(self, action: int) -> bool:
         return self._player_side[action] > 0
 
@@ -257,6 +261,7 @@ class MancalaEnv(gym.Env):
             "player_score": self._player_score,
             "opponent_score": self._opponent_score,
             "opponent_to_start": not self._is_player_turn,
+            "is_game_over": self._is_game_over(),
         }
 
     def _deserialise(self, serialised_form: dict) -> bool:
