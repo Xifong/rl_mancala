@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
 
 from pkg.mancala_agent_pkg.inference_api.infer import (
-    get_action_to_play,
+    get_action_to_play_from,
     get_fresh_env,
     get_env_from,
 )
@@ -82,7 +82,9 @@ def get_next_env_state() -> str:
     return jsonify(
         BoardStateResponse(
             current_state=env.get_serialised_form(),
-            metadata={"allowed_moves": env.get_allowed_moves()},
+            metadata={
+                "allowed_moves": env.get_allowed_moves(),
+            },
         ).model_dump()
     )
 
@@ -108,13 +110,54 @@ def get_next_move() -> str:
         return f"could not unmarshal body data: {e.errors()}", 400
 
     try:
-        action = get_action_to_play(move_request.current_state)
+        action = get_action_to_play_from(move_request.current_state)
     except ValueError as e:
         return f"could not get action to play: {e}", 400
     except Exception as e:
         return f"could not get action to play: {e}", 500
 
     return jsonify(asdict(action))
+
+
+@app.route("/api/play_move", methods=["PUT"])
+def play_move() -> str:
+    if not request.data:
+        return "body must contain data", 400
+
+    try:
+        data = json.loads(request.data)
+    except json.JSONDecodeError as e:
+        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
+
+    try:
+        state_request = NextStateRequest(**data)
+    except ValidationError as e:
+        return f"could not unmarshal body data: '{e.errors()}'", 400
+
+    env = get_env_from(state_request.current_state)
+    env.step_in_play_mode(state_request.action)
+
+    intermediate_state = BoardState(**env.get_serialised_form())
+
+    try:
+        opponent_action = get_action_to_play_from(intermediate_state)
+    except ValueError as e:
+        return f"could not get action to play: {e}", 400
+    except Exception as e:
+        return f"could not get action to play: {e}", 500
+
+    env.step_in_play_mode(opponent_action)
+
+    return jsonify(
+        BoardStateResponse(
+            current_state=env.get_serialised_form(),
+            metadata={
+                "intermediate_state": intermediate_state,
+                "opponent_played": opponent_action,
+                "allowed_moves": env.get_allowed_moves(),
+            },
+        ).model_dump()
+    )
 
 
 if __name__ == "__main__":

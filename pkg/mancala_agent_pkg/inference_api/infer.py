@@ -48,7 +48,7 @@ def get_player_perspective_env(board_state: BoardState) -> mancala_env.MancalaEn
     return get_env_from(rotated_state)
 
 
-def get_action_to_play(board_state: BoardState) -> ActionPlayed:
+def get_action_to_play_from(board_state: BoardState) -> ActionPlayed:
     env = get_player_perspective_env(board_state)
 
     if env.get_serialised_form()["is_game_over"]:
