@@ -5,7 +5,6 @@ import numpy as np
 import mancala_env  # noqa: F401 is used
 from stable_baselines3 import DQN
 from stable_baselines3.common.base_class import BaseAlgorithm
-from dataclasses import dataclass
 
 
 def load_model(model: str) -> BaseAlgorithm:

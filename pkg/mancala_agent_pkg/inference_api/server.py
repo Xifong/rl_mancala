@@ -55,7 +55,7 @@ def get_initial_state() -> str:
     )
 
 
-class NextStateRequest(BaseModel):
+class ActionNextStateRequest(BaseModel):
     model_config = ConfigDict(strict=True)
     current_state: BoardState = Field(alias="current-state")
     action: NonNegativeInt
@@ -72,7 +72,7 @@ def get_next_env_state() -> str:
         return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
 
     try:
-        state_request = NextStateRequest(**data)
+        state_request = ActionNextStateRequest(**data)
     except ValidationError as e:
         return f"could not unmarshal body data: '{e.errors()}'", 400
 
@@ -119,7 +119,7 @@ def get_next_move() -> str:
     return jsonify(asdict(action))
 
 
-@app.route("/api/play_move", methods=["PUT"])
+@app.route("/api/player_move", methods=["PUT"])
 def play_move() -> str:
     if not request.data:
         return "body must contain data", 400
@@ -130,14 +130,27 @@ def play_move() -> str:
         return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
 
     try:
-        state_request = NextStateRequest(**data)
+        state_request = ActionNextStateRequest(**data)
     except ValidationError as e:
         return f"could not unmarshal body data: '{e.errors()}'", 400
+
+    if state_request.current_state.opponent_to_start:
+        return "must be player's turn to play", 400
 
     env = get_env_from(state_request.current_state)
     env.step_in_play_mode(state_request.action)
 
     intermediate_state = BoardState(**env.get_serialised_form())
+
+    if not intermediate_state.opponent_to_start:
+        return jsonify(
+            BoardStateResponse(
+                current_state=intermediate_state,
+                metadata={
+                    "allowed_moves": env.get_allowed_moves(),
+                },
+            ).model_dump()
+        )
 
     try:
         opponent_action = get_action_to_play_from(intermediate_state)
@@ -146,14 +159,59 @@ def play_move() -> str:
     except Exception as e:
         return f"could not get action to play: {e}", 500
 
-    env.step_in_play_mode(opponent_action)
+    env.step_in_play_mode(opponent_action.action)
 
     return jsonify(
         BoardStateResponse(
             current_state=env.get_serialised_form(),
             metadata={
                 "intermediate_state": intermediate_state,
-                "opponent_played": opponent_action,
+                "opponent_played": opponent_action.action,
+                "allowed_moves": env.get_allowed_moves(),
+            },
+        ).model_dump()
+    )
+
+
+class NoActionNextStateRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    current_state: BoardState = Field(alias="current-state")
+
+
+@app.route("/api/opponent_move", methods=["PUT"])
+def opponent_move() -> str:
+    if not request.data:
+        return "body must contain data", 400
+
+    try:
+        data = json.loads(request.data)
+    except json.JSONDecodeError as e:
+        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
+
+    try:
+        state_request = NoActionNextStateRequest(**data)
+    except ValidationError as e:
+        return f"could not unmarshal body data: '{e.errors()}'", 400
+
+    if not state_request.current_state.opponent_to_start:
+        return "must be opponent's turn to play", 400
+
+    env = get_env_from(state_request.current_state)
+
+    try:
+        opponent_action = get_action_to_play_from(state_request.current_state)
+    except ValueError as e:
+        return f"could not get action to play: {e}", 400
+    except Exception as e:
+        return f"could not get action to play: {e}", 500
+
+    env.step_in_play_mode(opponent_action.action)
+
+    return jsonify(
+        BoardStateResponse(
+            current_state=env.get_serialised_form(),
+            metadata={
+                "opponent_played": opponent_action.action,
                 "allowed_moves": env.get_allowed_moves(),
             },
         ).model_dump()
