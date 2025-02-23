@@ -1,24 +1,14 @@
-import os
 import gymnasium as gym
 import numpy as np
 
 import mancala_env  # noqa: F401 is used
-from stable_baselines3 import DQN
-from stable_baselines3.common.base_class import BaseAlgorithm
-
-
-def load_model(model: str) -> BaseAlgorithm:
-    model_path = f"./saved_models/{model}/best_model"
-    assert os.path.isfile(
-        f"{model_path}.zip"
-    ), f"{model_path}.zip must exist if using saved opponent policy"
-
-    return DQN.load(model_path)
+from pkg.mancala_agent_pkg.model.opponent_policy import get_saved_opponent_policy
+from pkg.mancala_agent_pkg.model.load_model import load_model
 
 
 def infer_from_observation(observation: np.array) -> int:
-    fresh_model = load_model("prod")
-    action, _ = fresh_model.predict(observation, deterministic=False)
+    opponent_policy = get_saved_opponent_policy("prod", deterministic=False)
+    action = opponent_policy(seed=None, observation=observation)
     return int(action)
 
 

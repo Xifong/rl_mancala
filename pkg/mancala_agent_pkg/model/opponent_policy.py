@@ -1,6 +1,6 @@
 import numpy as np
 
-from pkg.mancala_agent_pkg.model.infer import load_model
+from pkg.mancala_agent_pkg.model.load_model import load_model
 
 
 def get_random_valid_move(opponent_side: np.array) -> int:
