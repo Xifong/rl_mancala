@@ -9,7 +9,6 @@ from stable_baselines3.common.monitor import Monitor
 
 import pkg.mancala_agent_pkg.model.opponent_policy as op
 import pkg.mancala_agent_pkg.model.save as save
-import pkg.mancala_agent_pkg.model.infer as infer
 
 logging.basicConfig(
     filename=f"./{save.get_last_run_path()}/env.log",

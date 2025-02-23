@@ -29,7 +29,7 @@ def get_fresh_env(is_player_turn: bool) -> mancala_env.MancalaEnv:
 
 def get_env_from(boardstate: BoardState) -> mancala_env.MancalaEnv:
     base_env = get_gym_env()
-    base_env.start_in_play_mode_midgame(boardstate)
+    base_env.start_in_play_mode_midgame(boardstate.copy(deep=True))
     return base_env
 
 
