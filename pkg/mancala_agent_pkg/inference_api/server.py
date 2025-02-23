@@ -1,9 +1,10 @@
 import os
-import json
 from dataclasses import asdict
 
-from flask import Flask, request, jsonify
-from pydantic import BaseModel, NonNegativeInt, ValidationError, Field, ConfigDict
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
+from pydantic import BaseModel, NonNegativeInt, Field, ConfigDict
 
 from pkg.mancala_agent_pkg.inference_api.infer import (
     get_action_to_play_from,
@@ -16,22 +17,21 @@ from pkg.mancala_agent_pkg.inference_api.types import (
     History,
 )
 
-app = Flask(__name__)
 
-logger = app.logger
+app = FastAPI(
+    title="Mancala API",
+    description="API for playing the game of Mancala",
+    version="1.0.0",
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api",
+    redoc_url="/api/redoc_ui",
+)
 
-
-@app.after_request
-def add_header(response):
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
-
-
-class GetInitialRequest(BaseModel):
-    # Allowing type coercion from "true" -> True etc
-    is_player_turn: bool = Field(alias="is-agent-turn")
+headers = {
+    "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+    "Pragme": "no-cache",
+    "Expires": "0",
+}
 
 
 class BoardStateResponse(BaseModel):
@@ -40,23 +40,10 @@ class BoardStateResponse(BaseModel):
     metadata: PlayMetadata
 
 
-@app.route("/api/initial_state", methods=["GET"])
-def get_initial_state() -> str:
-    args = request.args
-
-    try:
-        initial_request = GetInitialRequest(**args)
-    except ValidationError as e:
-        return f"could not unmarshal request args: '{e.errors()}'", 400
-
-    env = get_fresh_env(is_player_turn=initial_request.is_player_turn)
-
-    return jsonify(
-        BoardStateResponse(
-            current_state=env.get_serialised_form(),
-            metadata={"allowed_moves": env.get_allowed_moves()},
-        ).model_dump()
-    )
+class ActionResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    action: NonNegativeInt
+    was_opponent_move: bool
 
 
 class ActionNextStateRequest(BaseModel):
@@ -65,113 +52,119 @@ class ActionNextStateRequest(BaseModel):
     action: NonNegativeInt
 
 
-@app.route("/api/next_state", methods=["PUT"])
-def get_next_env_state() -> str:
-    if not request.data:
-        return "body must contain data", 400
-
-    try:
-        data = json.loads(request.data)
-    except json.JSONDecodeError as e:
-        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
-
-    try:
-        state_request = ActionNextStateRequest(**data)
-    except ValidationError as e:
-        return f"could not unmarshal body data: '{e.errors()}'", 400
-
-    history = History()
-    history.record_start(state=state_request.current_state, action=state_request.action)
-
-    env = get_env_from(state_request.current_state)
-    env.step_in_play_mode(state_request.action)
-
-    final_state = env.get_serialised_form()
-    history.end(last_state=BoardState(**final_state))
-
-    return jsonify(
-        BoardStateResponse(
-            current_state=final_state,
-            metadata={"allowed_moves": env.get_allowed_moves(), "history": history},
-        ).model_dump()
-    )
-
-
 class ActionRequest(BaseModel):
     model_config = ConfigDict(strict=True)
     current_state: BoardState = Field(alias="current-state")
 
 
-@app.route("/api/next_move", methods=["PUT"])
-def get_next_move() -> str:
-    if not request.data:
-        return "body must contain data", 400
+@app.get("/api/initial_state", tags=["atomic-action"])
+async def get_initial_state(is_agent_turn: bool) -> BoardStateResponse:
+    """
+    Get the initial state of a new game.
+    """
+    env = get_fresh_env(is_player_turn=is_agent_turn)
 
-    try:
-        data = json.loads(request.data)
-    except json.JSONDecodeError as e:
-        return f"could not load body data '{e.doc[:15]}', error {e}", 400
+    return JSONResponse(
+        content=BoardStateResponse(
+            current_state=env.get_serialised_form(),
+            metadata={"allowed_moves": env.get_allowed_moves()},
+        ).model_dump(),
+        headers=headers,
+    )
 
-    try:
-        move_request = ActionRequest(**data)
-    except ValidationError as e:
-        return f"could not unmarshal body data: {e.errors()}", 400
 
+@app.put("/api/next_state", tags=["atomic-action"])
+async def get_next_env_state(body: ActionNextStateRequest) -> BoardStateResponse:
+    """
+    Given an existing game state and an action to play, return the next game state.
+    Actions can be played from either player or opponent perspectives, with the current
+    value of `opponent_to_start` determining which.
+    """
+    history = History()
+    history.record_start(state=body.current_state, action=body.action)
+
+    env = get_env_from(body.current_state)
+    env.step_in_play_mode(body.action)
+
+    final_state = env.get_serialised_form()
+    history.end(last_state=BoardState(**final_state))
+
+    return JSONResponse(
+        content=BoardStateResponse(
+            current_state=final_state,
+            metadata={"allowed_moves": env.get_allowed_moves(), "history": history},
+        ).model_dump(),
+        headers=headers,
+    )
+
+
+@app.put("/api/next_move", tags=["atomic-action"])
+async def get_next_move(body: ActionRequest) -> ActionResponse:
+    """
+    Given an existing game state, return an action to play using the current deployed RL
+    model. (Skill not currently guaranteed!)
+    """
     try:
-        action = get_action_to_play_from(move_request.current_state)
+        action = get_action_to_play_from(body.current_state)
     except ValueError as e:
-        return f"could not get action to play: {e}", 400
+        raise HTTPException(
+            status_code=400, detail=f"could not get action to play: {e}"
+        )
     except Exception as e:
-        return f"could not get action to play: {e}", 500
+        raise HTTPException(
+            status_code=400, detail=f"could not get action to play: {e}"
+        )
 
-    return jsonify(asdict(action))
+    return JSONResponse(
+        content=asdict(action),
+        headers=headers,
+    )
 
 
-@app.route("/api/play_move", methods=["PUT"])
-def play_move() -> str:
-    if not request.data:
-        return "body must contain data", 400
-
-    try:
-        data = json.loads(request.data)
-    except json.JSONDecodeError as e:
-        return f"could not load body data '{e.doc[:15]}', error '{e}'", 400
-
-    try:
-        state_request = ActionNextStateRequest(**data)
-    except ValidationError as e:
-        return f"could not unmarshal body data: '{e.errors()}'", 400
-
-    if state_request.current_state.opponent_to_start:
-        return "must be player's turn to play", 400
+@app.put("/api/play_move", tags=["compound-action"])
+async def play_move(body: ActionNextStateRequest) -> BoardStateResponse:
+    """
+    Given an existing game state where the player is next to play, and an action for them
+    to play:
+        1. update the game state
+        2. play opponent actions until it's the players turn again
+        3. return a full history
+    """
+    if body.current_state.opponent_to_start:
+        raise HTTPException(status_code=400, detail="must be player's turn to play")
 
     history = History()
-    history.record_start(state=state_request.current_state, action=state_request.action)
+    history.record_start(state=body.current_state, action=body.action)
 
-    env = get_env_from(state_request.current_state)
-    env.step_in_play_mode(state_request.action)
+    env = get_env_from(body.current_state)
+    env.step_in_play_mode(body.action)
 
     latest_state = BoardState(**env.get_serialised_form())
 
     if not latest_state.opponent_to_start:
         history.end(latest_state)
-        return jsonify(
-            BoardStateResponse(
+        return JSONResponse(
+            content=BoardStateResponse(
                 current_state=latest_state,
                 metadata={
                     "allowed_moves": env.get_allowed_moves(),
                     "history": history,
                 },
-            ).model_dump()
+            ).model_dump(),
+            headers=headers,
         )
 
     while latest_state.opponent_to_start:
         try:
             opponent_action = get_action_to_play_from(latest_state)
         except ValueError as e:
-            return f"could not get action to play: {e}", 400
+            raise HTTPException(
+                status_code=400, detail=f"could not get action to play: {e}"
+            )
         except Exception as e:
-            return f"could not get action to play: {e}", 500
+            raise HTTPException(
+                status_code=500, detail=f"could not get action to play: {e}"
+            )
 
         history.record(latest_state, opponent_action.action)
 
@@ -180,16 +173,19 @@ def play_move() -> str:
 
     history.end(latest_state)
 
-    return jsonify(
-        BoardStateResponse(
+    return JSONResponse(
+        content=BoardStateResponse(
             current_state=env.get_serialised_form(),
             metadata={
                 "allowed_moves": env.get_allowed_moves(),
                 "history": history,
             },
-        ).model_dump()
+        ).model_dump(),
+        headers=headers,
     )
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

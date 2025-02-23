@@ -29,7 +29,7 @@ cp -r "$ENV_PACKAGE_ROOT/dist" "$TMP_DIR/deps/"
 
 # Copy files required at run-time to ./tmp/run
 cp "$AGENT_PACKAGE_ROOT/inference_api/"*.py "$TMP_DIR"/run/pkg/mancala_agent_pkg/inference_api/
-cp "$AGENT_PACKAGE_ROOT/model/infer.py" "$TMP_DIR/run/pkg/mancala_agent_pkg/model/infer.py"
+cp "$AGENT_PACKAGE_ROOT/model/"*.py "$TMP_DIR"/run/pkg/mancala_agent_pkg/model/
 cp -r "$PROJECT_ROOT/saved_models/prod" "$TMP_DIR/run/saved_models"
 
 tree "$TMP_DIR"

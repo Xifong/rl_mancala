@@ -1,23 +1,24 @@
 annotated-types==0.7.0
-blinker==1.9.0
+anyio==4.8.0
 click==8.1.8
-cloudpickle==3.1.0
+cloudpickle==3.1.1
 contourpy==1.3.1
 cycler==0.12.1
 Farama-Notifications==0.0.4
+fastapi==0.115.8
 filelock==3.13.1
-Flask==3.1.0
-fonttools==4.55.3
-fsspec==2024.2.0
+fonttools==4.56.0
+fsspec==2024.6.1
 gymnasium==1.0.0
-itsdangerous==2.2.0
-Jinja2==3.1.5
+h11==0.14.0
+idna==3.10
+Jinja2==3.1.4
 kiwisolver==1.4.8
-MarkupSafe==3.0.2
+MarkupSafe==2.1.5
 matplotlib==3.10.0
 mpmath==1.3.0
-networkx==3.2.1
-numpy==1.26.4
+networkx==3.3
+numpy==2.2.3
 packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
@@ -26,15 +27,18 @@ pydantic_core==2.27.2
 pygame==2.6.1
 pyparsing==3.2.1
 python-dateutil==2.9.0.post0
-pytz==2024.2
-setuptools==70.0.0
+pytz==2025.1
+setuptools==70.2.0
 six==1.17.0
-stable_baselines3==2.4.0
+sniffio==1.3.1
+stable_baselines3==2.5.0
+starlette==0.45.3
 sympy==1.13.1
 typing_extensions==4.12.2
-tzdata==2024.2
-Werkzeug==3.1.3
+tzdata==2025.1
+uvicorn==0.34.0
+
 # This needs to be installed manually (see build/env/local_build.sh)
-# mancala_env @ file:///home/xifong/python/stable_baselines/pkg/mancala_env_pkg/dist/mancala_env-0.0.1-py3-none-any.whl#sha256=16eb70ddc22cef38fdbbcffef8b291820cf51188e3fc63c544e71db55d2b8e5f
+# mancala_env @ file:///home/xifong/python/stable_baselines/pkg/mancala_env_pkg/dist/mancala_env-0.0.1-py3-none-any.whl#sha256=12e308a94f81a7716b45992cbededcba86ae9410729d13a4010c97141ed7a035
 # This needs to be installed manually (see build/first_time/local.sh and README.md)
-# torch==x.y.z+cpu
+# torch==x.y.z+cpu (left unpinned)
