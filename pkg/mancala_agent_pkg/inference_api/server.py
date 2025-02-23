@@ -1,7 +1,7 @@
 import os
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from pydantic import BaseModel, NonNegativeInt, Field, ConfigDict
@@ -17,12 +17,13 @@ from pkg.mancala_agent_pkg.inference_api.types import (
     History,
 )
 
+open_api_schema_path = "api/v1/openapi.json"
 
 app = FastAPI(
     title="Mancala API",
     description="API for playing the game of Mancala",
     version="1.0.0",
-    openapi_url="/api/v1/openapi.json",
+    openapi_url=f"/{open_api_schema_path}",
     docs_url="/api",
     redoc_url="/api/redoc_ui",
 )
@@ -32,6 +33,17 @@ headers = {
     "Pragme": "no-cache",
     "Expires": "0",
 }
+
+
+# This middleware checks if the server is being run in prod and accounts for the redirect
+# that I'm using to keep everything under my personal domain.
+@app.middleware("http")
+async def dispatch(request: Request, call_next):
+    if os.environ.get("IS_PROD") == "true":
+        request.app.openapi_url = f"/mancala/{open_api_schema_path}"
+
+    response = await call_next(request)
+    return response
 
 
 class BoardStateResponse(BaseModel):

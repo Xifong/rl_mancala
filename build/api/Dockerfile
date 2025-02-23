@@ -14,5 +14,6 @@ RUN pip install ./deps/mancala_env-0.0.1-py3-none-any.whl
 RUN rm -rf ./deps
 COPY ./tmp/run .
 ENV PATH="/app/venv/bin:$PATH"
+ENV IS_PROD="true"
 CMD [ "python3.12", "-m", "pkg.mancala_agent_pkg.inference_api.server" ]
 EXPOSE ${PORT}
