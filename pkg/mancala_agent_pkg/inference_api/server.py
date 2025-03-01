@@ -85,7 +85,7 @@ async def get_initial_state(is_agent_turn: bool) -> BoardStateResponse:
     )
 
 
-@app.put("/api/next_state", tags=["atomic-action"])
+@app.post("/api/next_state", tags=["atomic-action"])
 async def get_next_env_state(body: ActionNextStateRequest) -> BoardStateResponse:
     """
     Given an existing game state and an action to play, return the next game state.
@@ -110,7 +110,7 @@ async def get_next_env_state(body: ActionNextStateRequest) -> BoardStateResponse
     )
 
 
-@app.put("/api/next_move", tags=["atomic-action"])
+@app.post("/api/next_move", tags=["atomic-action"])
 async def get_next_move(body: ActionRequest) -> ActionResponse:
     """
     Given an existing game state, return an action to play using the current deployed RL
@@ -133,7 +133,7 @@ async def get_next_move(body: ActionRequest) -> ActionResponse:
     )
 
 
-@app.put("/api/play_move", tags=["compound-action"])
+@app.post("/api/play_move", tags=["compound-action"])
 async def play_move(body: ActionNextStateRequest) -> BoardStateResponse:
     """
     Given an existing game state where the player is next to play, and an action for them
