@@ -2,6 +2,8 @@
 
 Over Christmas 2024, I've been playing Mancala with my family. This is a project I've put together to feed me moves to beat them with. It's a pretty simple game, so the custom gymnasium environment under `./mancala_env/` was quick to write and taking stock DQN without any tuning from stable_baselines3 has been working out so far. What I call the greedy agent achieves a 99+% win rate against random moves, and training against the greedy agent so far I've gotten a similarly high win rate in evaluation. 
 
+Mancala game playing API deployed at: https://xifong.com/mancala/api
+
 ## First Time Install
 Use at risk (setup script untested). Also assumes you can use CUDA.
 ```bash
