@@ -30,6 +30,7 @@
 ~* Backend should say what move indexes are valid~
 ~* infer_from_observation should rotate board perspective as needed~
 ~* New endpoint for combined (play next move and get next)~
+~* Backend should validate if board state is valid~
 * Backend should reject playing moves from the wrong player/ensure the move is played on the correct player
 * Improve loading of models into inference api:
     * Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket

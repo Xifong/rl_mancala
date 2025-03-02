@@ -79,6 +79,7 @@ def ensure_open_api_schemas(app: FastAPI):
                         name=route.name,
                         methods=route.methods,
                         endpoint=route.endpoint,
+                        tags=route.tags,
                     )
                 )
 

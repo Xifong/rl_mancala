@@ -1,18 +1,41 @@
-from typing import Optional
-from pydantic import (
-    BaseModel,
-    NonNegativeInt,
-    ConfigDict,
-)
+from typing import Optional, Self
+from pydantic import BaseModel, NonNegativeInt, ConfigDict, model_validator
 
 
 class BoardState(BaseModel):
-    model_config = ConfigDict(strict=True)
+    model_config = {
+        "strict": True,
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "opponent_score": 0,
+                    "opponent_side": [4, 4, 4, 4, 4, 4],
+                    "opponent_to_start": True,
+                    "player_score": 0,
+                    "player_side": [4, 4, 4, 4, 4, 4],
+                },
+            ]
+        },
+    }
     player_score: NonNegativeInt
     player_side: list[NonNegativeInt]
     opponent_score: NonNegativeInt
     opponent_side: list[NonNegativeInt]
     opponent_to_start: bool
+
+    @model_validator(mode="after")
+    def check_game_state_valid(self) -> Self:
+        gems_total = (
+            self.player_score
+            + sum(self.player_side)
+            + self.opponent_score
+            + sum(self.opponent_side)
+        )
+        if gems_total != 48:
+            raise ValueError(
+                f"must always be exactly 48 gems, but board state contained only '{gems_total}'"
+            )
+        return self
 
 
 class HistoryEntry(BaseModel):
