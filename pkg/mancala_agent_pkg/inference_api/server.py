@@ -5,6 +5,8 @@ from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
+from fastapi.routing import APIRoute
 
 from pydantic import BaseModel, NonNegativeInt, Field, ConfigDict
 
@@ -21,6 +23,7 @@ from pkg.mancala_agent_pkg.inference_api.types import (
 
 from mancala_env import get_game_information_message_format
 
+REDIRECT_PREFIX = "/mancala"
 open_api_schema_path = "api/v1/openapi.json"
 
 app = FastAPI(
@@ -33,6 +36,7 @@ app = FastAPI(
 )
 
 uvicorn_logger = logging.getLogger("uvicorn.error")
+
 mancala_env_logger = logging.getLogger("mancala_env.envs.env_logging")
 mancala_env_logger.setLevel(logging.INFO)
 formatter = logging.Formatter(
@@ -52,12 +56,61 @@ headers = {
 }
 
 
-# This middleware checks if the server is being run in prod and accounts for the redirect
-# that I'm using to keep everything under my personal domain.
+open_api_schemas = {}
+
+
+def ensure_open_api_schemas(app: FastAPI):
+    global open_api_schemas
+    if not open_api_schemas:
+        uvicorn_logger.debug("creating open api schemas")
+        open_api_schemas["non-redirected"] = get_openapi(
+            title="Mancala API",
+            version="1.0.0",
+            description="API for playing the game of Mancala",
+            routes=app.routes,
+        )
+
+        redirected_routes = []
+        for route in app.routes:
+            if isinstance(route, APIRoute):
+                redirected_routes.append(
+                    APIRoute(
+                        path=f"{REDIRECT_PREFIX}{route.path}",
+                        name=route.name,
+                        methods=route.methods,
+                        endpoint=route.endpoint,
+                    )
+                )
+
+        open_api_schemas["redirected"] = get_openapi(
+            title="Mancala API",
+            version="1.0.0",
+            description="API for playing the game of Mancala",
+            routes=redirected_routes,
+        )
+
+
+def set_openapi_schema(request: Request, app: FastAPI):
+    ensure_open_api_schemas(app)
+
+    if "X-Cloudflare-Redirect" in request.headers:
+        uvicorn_logger.info("setting api schema and url for redirection")
+        request.app.openapi_url = f"{REDIRECT_PREFIX}/{open_api_schema_path}"
+        request.app.openapi_schema = open_api_schemas["redirected"]
+    else:
+        # Must set these back, since they are not isolated between requests
+        request.app.openapi_url = f"/{open_api_schema_path}"
+        request.app.openapi_schema = open_api_schemas["non-redirected"]
+
+
+# this middleware checks if the server is being run behind a redirect and adjusts the generated
+# openapi specs and urls to account for it
 @app.middleware("http")
 async def dispatch(request: Request, call_next):
-    if os.environ.get("IS_PROD") == "true":
-        request.app.openapi_url = f"/mancala/{open_api_schema_path}"
+    set_openapi_schema(request, request.app)
+
+    uvicorn_logger.info(f"path: {request.scope['path']}")
+    uvicorn_logger.debug(f"open_api_url: {request.app.openapi_url}")
 
     response = await call_next(request)
     return response
@@ -217,6 +270,7 @@ async def play_move(body: ActionNextStateRequest) -> BoardStateResponse:
 if __name__ == "__main__":
     import uvicorn
 
+    # setting log level here because this overwrites log level set directly on the uvicorn logger
     uvicorn.run(
-        app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), log_level="info"
+        app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), log_level="debug"
     )
