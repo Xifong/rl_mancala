@@ -1,7 +1,7 @@
 import logging
 import gymnasium as gym
 
-import mancala_env  # noqa: F401 (mancala_env is in fact used)
+import mancala_env
 from stable_baselines3 import DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import EvalCallback
@@ -10,11 +10,17 @@ from stable_baselines3.common.monitor import Monitor
 import pkg.mancala_agent_pkg.model.opponent_policy as op
 import pkg.mancala_agent_pkg.model.save as save
 
-logging.basicConfig(
-    filename=f"./{save.get_last_run_path()}/env.log",
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+mancala_env_logger = logging.getLogger("mancala_env.envs.env_logging")
+mancala_env_logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s [%(processName)s: %(process)d] "
+    "[%(threadName)s: %(thread)d] [%(levelname)s] "
+    f"[%(name)s] [{mancala_env.get_game_information_message_format()}]: "
+    "%(message)s"
 )
+file_handler = logging.FileHandler(f"./{save.get_last_run_path()}/env.log")
+file_handler.setFormatter(formatter)
+mancala_env_logger.addHandler(file_handler)
 
 
 OPPONENT_MODEL_NAME = "opponent"

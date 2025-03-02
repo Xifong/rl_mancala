@@ -188,7 +188,7 @@ class MancalaEnv(gym.Env):
         # No state change happens on invalid moves, but a negative reward is received
         # Truncate after 10 consecutive invalid actions
         if not self._is_player_action_valid(action):
-            self.logger.debug(f"player attempted invalid action: '{action}'")
+            self.logger.info(f"player attempted invalid action: '{action}'")
             self._invalid_count += 1
             return (
                 self._get_obs(),
@@ -211,7 +211,7 @@ class MancalaEnv(gym.Env):
 
         self.logger.debug(self.get_serialised_form())
         if self._is_game_over():
-            self.logger.debug("finished a game")
+            self.logger.info("finished a game")
 
         self.logger.debug(f"step '{self._valid_step_count}' complete")
         self._valid_step_count += 1
@@ -285,21 +285,23 @@ class MancalaEnv(gym.Env):
         self._record()
 
     def start_in_play_mode_initial(self, is_player_turn: bool):
-        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
+        self.logger = env_logging.get_logger_with_context({"game_id": uuid.uuid4()})
         self._set_board_initial_state()
         self._start_new_history()
         self._is_player_turn = is_player_turn
+        self.logger.info("starting Mancala in play mode from start")
         self.logger.debug(f"Initial state: '{self.get_serialised_form()}'")
 
     def start_in_play_mode_midgame(self, game_state: dict):
-        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
+        self.logger = env_logging.get_logger_with_context({"game_id": uuid.uuid4()})
         self._is_player_turn = self._deserialise(game_state)
         self._start_new_history()
+        self.logger.info("starting Mancala in play mode from midgame")
         self.logger.debug(f"Initial state: '{self.get_serialised_form()}'")
 
     def reset(self, seed: int = None, options: Any = None) -> tuple[list[int], dict]:
         # Set a new logger uuid
-        self.logger = env_logging.setup_env_logger()({"game_id": uuid.uuid4()})
+        self.logger = env_logging.get_logger_with_context({"game_id": uuid.uuid4()})
         self._set_seed(seed)
 
         self._set_board_initial_state()

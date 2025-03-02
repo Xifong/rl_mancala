@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException, Request
@@ -17,6 +19,8 @@ from pkg.mancala_agent_pkg.inference_api.types import (
     History,
 )
 
+from mancala_env import get_game_information_message_format
+
 open_api_schema_path = "api/v1/openapi.json"
 
 app = FastAPI(
@@ -27,6 +31,19 @@ app = FastAPI(
     docs_url="/api",
     redoc_url="/api/redoc_ui",
 )
+
+uvicorn_logger = logging.getLogger("uvicorn.error")
+mancala_env_logger = logging.getLogger("mancala_env.envs.env_logging")
+mancala_env_logger.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    "%(asctime)s [%(processName)s: %(process)d] "
+    "[%(threadName)s: %(thread)d] [%(levelname)s] "
+    f"[%(name)s] [{get_game_information_message_format()}]: "
+    "%(message)s"
+)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(formatter)
+mancala_env_logger.addHandler(stream_handler)
 
 headers = {
     "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
@@ -200,4 +217,6 @@ async def play_move(body: ActionNextStateRequest) -> BoardStateResponse:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    uvicorn.run(
+        app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), log_level="info"
+    )

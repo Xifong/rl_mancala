@@ -1,1 +1,2 @@
 from mancala_env.envs.mancala import MancalaEnv
+from mancala_env.envs.env_logging import get_game_information_message_format

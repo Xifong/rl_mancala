@@ -1,7 +1,7 @@
 # Todo next
 
 ## Training Improvements
-* Try out RLZoo for hyperparameter tuning
+~* Try out RLZoo for hyperparameter tuning~
 * command line options to train (i.e. set opponent and starting model etc)
 * Focus on correctness and testing of env/training
     - Latest bugs have shown me that having a more robust way to check that the things are genuinely correct is critical
@@ -29,7 +29,7 @@
 ~* Backend should say if game is over~
 ~* Backend should say what move indexes are valid~
 ~* infer_from_observation should rotate board perspective as needed~
-* New endpoint for combined (play next move and get next)
+~* New endpoint for combined (play next move and get next)~
 * Backend should reject playing moves from the wrong player/ensure the move is played on the correct player
 * Improve loading of models into inference api:
     * Instead of loading the prod saved model into the container directly, provision a bucket and have a build script to push the latest model there. Have the running service use the latest model from the bucket
@@ -39,5 +39,7 @@
 * Split api out of mancala_agent_pkg
 
 
-## Note to self!
+## Code Quality
+~* mancala env library should not configure logging handlers opaquely~
+* load logging configs in from config files
 * All the inline TODOS!

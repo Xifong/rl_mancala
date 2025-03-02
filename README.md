@@ -31,7 +31,7 @@ export TARGET_VENV="inference_venv" && ./build/env/local_build.sh && python -m p
 
 ### Locally in Docker
 ```bash
-./build/api/build.sh && PORT=8000 && docker run -d -p 8000:${PORT} -e PORT=${PORT} mancala 
+./build/api/build.sh && PORT=8080 && docker run -d -p 8080:${PORT} -e PORT=${PORT} mancala 
 ```
 Then to debug there are some options:
 ```bash
